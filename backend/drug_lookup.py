@@ -18,8 +18,14 @@ class BrandRequest(BaseModel):
     brand_name: str
 
 def load_cached_labels():
+    if not os.path.exists(CACHED_FILE):
+        return {}
     with open(CACHED_FILE, "r") as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return {}  # return empty dict if file is empty or invalid
+
 
 def save_cached_labels(labels_dict):
     with open(CACHED_FILE, "w") as f:
@@ -62,4 +68,4 @@ def get_brand_products(request: BrandRequest):
     save_cached_labels(cached_labels)
 
     return {"brand": brand_name, "products": products, "source": "api"}
-fetch_from_api("advil")
+
