@@ -1,20 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from difflib import get_close_matches
-from util import load_cached_labels, save_cached_labels
+from rapidfuzz import process, fuzz
+from backend.util import load_cached_labels, save_cached_labels
 import requests
 
 app = FastAPI(title="Drug Info Chatbot Backend")
 
 # ---- Pydantic Models ----
-class BrandRequest(BaseModel):
+class ProductRequest(BaseModel):
     brand_name: str
-
-class FullProductRequest(BaseModel):
-    brand_name: str
-    drug_dosage: str
-    route: str
-
+    drug_dosage: str | None = None
+    route: str | None = None
 
 # ---- RxNorm API Helper ----
 def fetch_from_api(brand_name: str):
@@ -38,64 +34,65 @@ def fetch_from_api(brand_name: str):
                     products.append(name)
     return products
 
-
-# ---- Brand Lookup ----
-@app.post("/get_products")
-def get_brand_products(request: BrandRequest):
-    brand_name = request.brand_name.strip().title()
+def get_or_fetch_products(brand_name: str):
+    """Check cache for brand products, else fetch from API and update cache."""
     cached_labels = load_cached_labels()
 
-    # Step 1: Check cache
-    if brand_name in cached_labels:
-        return {"brand": brand_name, "products": cached_labels[brand_name], "source": "cache"}
+    # Normalize brand name
+    brand = brand_name.strip().title()
 
-    # Step 2: Fetch from API
-    products = fetch_from_api(brand_name)
+    # Step 1: Return cached if available
+    if brand in cached_labels:
+        return cached_labels[brand], "cache"
+
+    # Step 2: Fetch from API if not cached
+    products = fetch_from_api(brand)
     if not products:
-        return {"brand": brand_name, "products": [], "source": "api", "note": "No products found"}
+        return [], "api"  # still return consistent structure
 
-    # Step 3: Cache and return
-    cached_labels[brand_name] = products
+    # Step 3: Cache the new result
+    cached_labels[brand] = products
     save_cached_labels(cached_labels)
 
-    return {"brand": brand_name, "products": products, "source": "api"}
+    return products, "api"
 
-
-# ---- Full Product Validation ----
-@app.post("/get_full_products")
-def get_full_products(request: FullProductRequest):
+@app.post("/get_products")
+def get_products(request: ProductRequest):
     brand = request.brand_name.strip().title()
-    dosage = request.drug_dosage.strip()
-    route = request.route.strip()
+    dosage = request.drug_dosage.strip() if request.drug_dosage else None
+    route = request.route.strip() if request.route else None
 
-    # Reuse get_brand_products logic (without double caching)
-    result = get_brand_products(BrandRequest(brand_name=brand))
-    products = result["products"]
+    # 🔹 Use helper
+    products, source = get_or_fetch_products(brand)
 
     if not products:
+        return {"brand": brand, "products": [], "source": source, "note": "No products found"}
+
+    # If dosage or route provided, refine results
+    if dosage or route:
+        user_query = " ".join(filter(None, [brand, dosage, route])).lower()
+
+        # Try exact substring matches
+        matches = [p for p in products if user_query in p.lower()]
+
+        # Fuzzy fallback
+        if not matches:
+            best = process.extractOne(user_query, products, scorer=fuzz.WRatio)
+            if best and best[1] > 70:
+                matches = [best[0]]
+
         return {
             "brand": brand,
-            "full_product": None,
-            "note": "No products found for this brand"
+            "full_product": matches[0] if matches else None,
+            "products_checked": len(products),
+            "source": source,
+            "note": "Match found" if matches else "No exact or close match found"
         }
 
-    # Combine user’s full input (normalize)
-    user_input_full = f"{brand} {dosage} {route}".lower()
-
-    # Try exact substring match first
-    matches = [p for p in products if user_input_full in p.lower()]
-
-    # If no direct match, try fuzzy matching
-    matched = matches[0] if matches else (
-        get_close_matches(user_input_full, products, n=1, cutoff=0.6)[0]
-        if get_close_matches(user_input_full, products, n=1, cutoff=0.6)
-        else None
-    )
-
+    # If only brand provided, return all products
     return {
         "brand": brand,
-        "full_product": matched,
-        "products_checked": len(products),
-        "source": result["source"],
-        "note": "Match found" if matched else "No exact or close match found"
+        "products": products,
+        "source": source,
+        "note": "Returning all products for this brand"
     }
