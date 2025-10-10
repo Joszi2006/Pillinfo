@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from rapidfuzz import process, fuzz
 from backend.util import load_cached_labels, save_cached_labels
