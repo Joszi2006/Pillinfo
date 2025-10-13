@@ -5,6 +5,7 @@ Single Responsibility: Process text through NER + Fuzzy matching
 from typing import Dict, Optional
 from backend.ml.ner_extractor import NERExtractor
 from backend.ml.fuzzy_matcher import FuzzyMatcher
+from backend.util import log_successful_extraction  # ← Use utility function!
 
 class TextProcessor:
     """
@@ -20,7 +21,7 @@ class TextProcessor:
         self.ner_extractor = NERExtractor()
         self.fuzzy_matcher = FuzzyMatcher()
     
-    def process_text(self, text: str, use_ner: bool = True) -> Dict:
+    def process_text(self, text: str, use_ner: bool = True, log_success: bool = False) -> Dict:
         """
         Process text through NER and fuzzy correction.
         This is the SHARED logic for both streams!
@@ -28,6 +29,7 @@ class TextProcessor:
         Args:
             text: Input text (from user OR from OCR)
             use_ner: Whether to use NER extraction
+            log_success: Whether to log successful extractions for active learning
         
         Returns:
             Dictionary with extracted and corrected information
@@ -67,7 +69,7 @@ class TextProcessor:
         correction = self.fuzzy_matcher.correct_drug_name(extracted_drug)
         final_drug_name = correction["corrected"]
         
-        return {
+        result = {
             "brand_name": final_drug_name,
             "dosage": extracted_dosage,
             "route": extracted_route,
@@ -76,6 +78,19 @@ class TextProcessor:
             "correction": correction,
             "original_text": text
         }
+        
+        # 🎓 Log successful extraction for Active Learning (using util function!)
+        if log_success and final_drug_name:
+            log_successful_extraction(
+                text=text,
+                brand_name=final_drug_name,
+                dosage=extracted_dosage,
+                route=extracted_route,
+                form=extracted_form,
+                confidence=correction.get("confidence", 0)
+            )
+        
+        return result
     
     def inject_cache(self, cache_dict: Dict):
         """Inject cache into fuzzy matcher."""

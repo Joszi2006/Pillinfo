@@ -85,6 +85,46 @@ def log_mismatch(original: str, corrected: str, confidence: float, source: str =
     except Exception as e:
         logger.error(f"Error logging mismatch: {e}")
 
+def log_successful_extraction(
+    text: str,
+    brand_name: str,
+    dosage: str = None,
+    route: str = None,
+    form: str = None,
+    confidence: float = 0
+):
+    """
+    Log successful extractions for Active Learning.
+    
+    Args:
+        text: Original text
+        brand_name: Extracted/corrected brand name
+        dosage: Extracted dosage
+        route: Extracted route
+        form: Extracted form
+        confidence: Correction confidence
+    """
+    ensure_data_directory()
+    
+    log_file = "data/training_data/successful_extractions.log"
+    
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "text": text,
+        "extracted_drug": brand_name,
+        "dosage": dosage,
+        "route": route,
+        "form": form,
+        "correction_confidence": confidence,
+        "success": True
+    }
+    
+    try:
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception as e:
+        logger.error(f"Error logging successful extraction: {e}")
+
 def get_cache_stats() -> Dict[str, Any]:
     """
     Get statistics about the cached data.

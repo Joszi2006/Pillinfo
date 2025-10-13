@@ -62,7 +62,11 @@ async def lookup_from_text(
     """
     try:
         # Step 1: Process text (SHARED LOGIC)
-        processed = text_processor.process_text(request.text, request.use_ner)
+        processed = text_processor.process_text(
+            request.text, 
+            request.use_ner,
+            log_success=True  # 🎓 Enable Active Learning!
+        )
         
         if not processed.get("brand_name"):
             return {
@@ -152,7 +156,11 @@ async def lookup_from_image(
             }
         
         # Step 2: Process text (SAME AS TEXT STREAM!)
-        processed = text_processor.process_text(ocr_result["corrected_text"], use_ner=True)
+        processed = text_processor.process_text(
+            ocr_result["corrected_text"], 
+            use_ner=True,
+            log_success=True  # 🎓 Enable Active Learning!
+        )
         
         if not processed.get("brand_name"):
             return {
