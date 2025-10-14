@@ -4,7 +4,7 @@ Single Responsibility: Fuzzy string matching and correction
 """
 from rapidfuzz import process, fuzz
 from typing import Dict, List, Optional
-from backend.core.config import Config
+from backend.core.config import Settings
 from backend.util import log_mismatch
 
 class FuzzyMatcher:
