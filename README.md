@@ -1,4 +1,4 @@
-# Drug-Info-Chatbot
+# Pillinfo
 
 ## 📌 Problem
 Many people struggle to understand the medications they are prescribed or buy over-the-counter. Drug packaging can be confusing, medical terms are hard to interpret, and misuse of medication leads to health risks. In regions with limited healthcare access, quick and reliable drug information is even harder to obtain.
