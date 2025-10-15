@@ -5,7 +5,7 @@ Single Responsibility: Extract medical entities from text
 import spacy
 import medspacy
 from typing import Dict, List
-
+from medspacy.ner import TargetRule
 class NERExtractor:
     """
     Extracts medical entities using MedSpacy.
@@ -38,8 +38,23 @@ class NERExtractor:
     
     def _add_custom_patterns(self):
         """Add custom entity patterns for drug-specific recognition."""
+        # Add common drug names to target matcher
+        if "medspacy_target_matcher" in self.nlp.pipe_names:
+            target_matcher = self.nlp.get_pipe("medspacy_target_matcher")
+            
+            # Common drug brand names
+            common_drugs = [
+                "Advil", "Tylenol", "Aspirin", "Lipitor", "Metformin",
+                "Ibuprofen", "Acetaminophen", "Atorvastatin", "Lisinopril",
+                "Amoxicillin", "Albuterol", "Metoprolol", "Amlodipine"
+            ]
+            
+            for drug in common_drugs:
+                rule = TargetRule(literal=drug, category="DRUG")
+                target_matcher.add(rule)
+        
         if "entity_ruler" not in self.nlp.pipe_names:
-            ruler = self.nlp.add_pipe("entity_ruler", before="ner")
+            ruler = self.nlp.add_pipe("entity_ruler", last=True)
             
             patterns = [
                 # Dosage patterns
@@ -87,7 +102,6 @@ class NERExtractor:
                 "all_entities": [...]
             }
         """
-        self._lazy_load()
         
         doc = self.nlp(text)
         
@@ -140,7 +154,6 @@ class NERExtractor:
         Returns:
             List of extraction results
         """
-        self._lazy_load()
         
         results = []
         for doc in self.nlp.pipe(texts):

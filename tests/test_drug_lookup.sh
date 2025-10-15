@@ -2,33 +2,33 @@
 
 # Usage message
 if [ -z "$1" ]; then
-  echo "Usage: $0 <brand_name> [drug_dosage] [route]"
-  echo "Example: $0 Advil 200 MG Oral Tablet"
-  exit 1
+    echo "Usage: $0 <brand_name> [drug_dosage] [route]"
+    echo "Example: $0 Advil '200 MG' 'Oral Tablet'"
+    exit 1
 fi
 
 # Collect arguments
-BRAND_NAME=$1
-DOSAGE=$2
-ROUTE="${@:3}"  # grabs everything after the 2nd arg (handles "Oral Tablet" nicely)
+BRAND_NAME="$1"
+DOSAGE="${2:-}"
+ROUTE="${3:-}"
 
-# Start uvicorn in background
-uvicorn backend.drug_lookup:app --reload &
+# Start uvicorn in background (using correct module path)
+echo "Starting backend server..."
+uvicorn backend.main:app --reload --port 8001 &
 SERVER_PID=$!
 
 # Make sure we kill the server on exit
 trap 'kill $SERVER_PID 2>/dev/null' EXIT
 
-# Give the server a moment to start
-sleep 2
+# Give the server time to start
+sleep 3
 
-# Send request
-echo "Sending request to /get_products with brand_name=$BRAND_NAME, dosage=$DOSAGE, route=$ROUTE..."
-curl -X POST "http://127.0.0.1:8000/get_products" \
-     -H "Content-Type: application/json" \
-     -d "{\"brand_name\": \"$BRAND_NAME\", \"drug_dosage\": \"$DOSAGE\", \"route\": \"$ROUTE\"}"
-
+# Send request to correct endpoint
+echo "Sending request to /lookup/manual..."
+curl -X POST http://localhost:8001/lookup/text \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Advil", "use_ner": true}'
 echo -e "\n"
 
 # Kill server
-kill $SERVER_PID
+kill $SERVER_PID 2>/dev/null

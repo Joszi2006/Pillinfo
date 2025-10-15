@@ -24,12 +24,16 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",  # Vite default port
+        "http://localhost:5174",
+        "http://localhost:5175",
         "http://localhost:3000",  # Create React App default port
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
         "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
+    allow_methods=["*"],  # Allows all methods (GET, POST, OPTIONS, etc.)
     allow_headers=["*"],  # Allows all headers
 )
 
@@ -65,8 +69,8 @@ async def startup_event():
     print("=" * 60)
     print("PILLINFO API SERVER STARTING...")
     print("=" * 60)
-    print("API Documentation: http://localhost:8000/docs")
-    print("Health Check: http://localhost:8000/health")
+    print("API Documentation: http://localhost:8001/docs")
+    print("Health Check: http://localhost:8001/health")
     print("Ready to identify drugs")
     print("=" * 60)
 
@@ -84,7 +88,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",  # Listen on all network interfaces
-        port=8000,
+        port=8001,  # Changed to 8001
         reload=True,  # Auto-reload on code changes (development only)
         log_level="info"
     )

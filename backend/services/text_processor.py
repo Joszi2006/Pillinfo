@@ -30,7 +30,7 @@ class TextProcessor:
             text: Input text (from user OR from OCR)
             use_ner: Whether to use NER extraction
             log_success: Whether to log successful extractions for active learning
-        
+            
         Returns:
             Dictionary with extracted and corrected information
         """
@@ -48,7 +48,24 @@ class TextProcessor:
         # Step 1: Extract entities with MedSpacy
         entities = self.ner_extractor.extract(text)
         
+        # Step 2: If NER finds no drugs, try fuzzy matching on the entire text
         if not entities.get("drugs"):
+            # Fallback: Try fuzzy matching on the input text
+            correction = self.fuzzy_matcher.correct_drug_name(text.strip())
+            
+            if correction.get("corrected") and correction.get("confidence", 0) > 0.6:
+                # Fuzzy matching found a match!
+                return {
+                    "brand_name": correction["corrected"],
+                    "dosage": None,
+                    "route": None,
+                    "form": None,
+                    "entities": entities,
+                    "correction": correction,
+                    "original_text": text
+                }
+            
+            # No drugs found by either method
             return {
                 "brand_name": None,
                 "dosage": None,
@@ -65,7 +82,7 @@ class TextProcessor:
         extracted_route = entities["routes"][0] if entities.get("routes") else None
         extracted_form = entities["forms"][0] if entities.get("forms") else None
         
-        # Step 2: Correct drug name with fuzzy matching
+        # Step 3: Correct drug name with fuzzy matching
         correction = self.fuzzy_matcher.correct_drug_name(extracted_drug)
         final_drug_name = correction["corrected"]
         
@@ -79,7 +96,7 @@ class TextProcessor:
             "original_text": text
         }
         
-        # 🎓 Log successful extraction for Active Learning (using util function!)
+        # Log successful extraction for Active Learning
         if log_success and final_drug_name:
             log_successful_extraction(
                 text=text,
@@ -91,7 +108,7 @@ class TextProcessor:
             )
         
         return result
-    
+        
     def inject_cache(self, cache_dict: Dict):
         """Inject cache into fuzzy matcher."""
         self.fuzzy_matcher.set_cache(cache_dict)

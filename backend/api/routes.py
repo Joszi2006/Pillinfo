@@ -15,7 +15,11 @@ router = APIRouter()
 
 # Dependency injection
 def get_text_processor():
-    return TextProcessor()
+    processor = TextProcessor()
+    # Inject cache into the processor's fuzzy matcher
+    cache_service = CacheService()
+    processor.inject_cache(cache_service.get_cache_dict())
+    return processor
 
 def get_drug_lookup_service():
     return DrugLookupService()
@@ -60,8 +64,10 @@ async def lookup_from_text(
     2. Extracted drug → DrugLookupService (Cache/API)
     3. (Optional) Calculate dosage if weight provided
     """
+    print(f"DEBUG ROUTE: Received request with text='{request.text}'")
     try:
         # Step 1: Process text (SHARED LOGIC)
+      
         processed = text_processor.process_text(
             request.text, 
             request.use_ner,
