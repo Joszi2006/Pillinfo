@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # Usage message
-if [ -z "$1" ]; then
-    echo "Usage: $0 <brand_name> [drug_dosage] [route]"
-    echo "Example: $0 Advil '200 MG' 'Oral Tablet'"
-    exit 1
-fi
+# if [ -z "$1" ]; then
+#     echo "Usage: $0 <brand_name> [drug_dosage] [route]"
+#     echo "Example: $0 Advil '200 MG' 'Oral Tablet'"
+#     exit 1
+# fi
 
-# Collect arguments
-BRAND_NAME="$1"
-DOSAGE="${2:-}"
-ROUTE="${3:-}"
+# # Collect arguments
+# BRAND_NAME="$1"
+# DOSAGE="${2:-}"
+# ROUTE="${3:-}"
 
 # Start uvicorn in background (using correct module path)
 echo "Starting backend server..."
@@ -27,7 +27,7 @@ sleep 3
 echo "Sending request to /lookup/manual..."
 curl -X POST http://localhost:8001/lookup/text \
   -H "Content-Type: application/json" \
-  -d '{"text": "Advil", "use_ner": true}'
+  -d '{"text": "I need Advil 200mg. I weigh 52kg", "use_ner": true}'
 echo -e "\n"
 
 # Kill server

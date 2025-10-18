@@ -1,109 +1,57 @@
 """
-NER Extractor - MedSpacy inference only
-Single Responsibility: Extract medical entities from text
+NER Extractor - Hugging Face Medical NER (FIXED VERSION)
+Single Responsibility: Extract medical entities from text using pre-trained models
 """
-import spacy
-import medspacy
 from typing import Dict, List
-from medspacy.ner import TargetRule
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+import re
+
 class NERExtractor:
     """
-    Extracts medical entities using MedSpacy.
-    Handles model loading and inference only.
-    Training is separate (see backend/models/train_medspacy.py)
+    Extracts medical entities using Hugging Face pre-trained NER model.
+    No manual patterns needed - model already knows medical terminology!
     """
     
-    def __init__(self, model_path: str = None):
+    def __init__(self, model_name: str = "Clinical-AI-Apollo/Medical-NER"):
         """
-        Initialize NER extractor.
+        Initialize NER extractor with Hugging Face model.
         
         Args:
-            model_path: Path to custom trained model (optional)
-                       If None, uses default MedSpacy model
+            model_name: Hugging Face model identifier
         """
+        self.model_name = model_name
         self.nlp = None
-        self.model_path = model_path
         self._lazy_load()
     
     def _lazy_load(self):
         """Lazy load the model to avoid loading on import."""
         if self.nlp is None:
-            if self.model_path:
-                # Load custom trained model
-                self.nlp = spacy.load(self.model_path)
-            else:
-                # Load default MedSpacy
-                self.nlp = medspacy.load()
-                self._add_custom_patterns()
-    
-    def _add_custom_patterns(self):
-        """Add custom entity patterns for drug-specific recognition."""
-        # Add common drug names to target matcher
-        if "medspacy_target_matcher" in self.nlp.pipe_names:
-            target_matcher = self.nlp.get_pipe("medspacy_target_matcher")
+            print(f"Loading medical NER model: {self.model_name}...")
             
-            # Common drug brand names
-            common_drugs = [
-                "Advil", "Tylenol", "Aspirin", "Lipitor", "Metformin",
-                "Ibuprofen", "Acetaminophen", "Atorvastatin", "Lisinopril",
-                "Amoxicillin", "Albuterol", "Metoprolol", "Amlodipine"
-            ]
+            # Load tokenizer and model
+            tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            model = AutoModelForTokenClassification.from_pretrained(self.model_name)
             
-            for drug in common_drugs:
-                rule = TargetRule(literal=drug, category="DRUG")
-                target_matcher.add(rule)
-        
-        if "entity_ruler" not in self.nlp.pipe_names:
-            ruler = self.nlp.add_pipe("entity_ruler", last=True)
+            # Create NER pipeline
+            self.nlp = pipeline(
+                "ner",
+                model=model,
+                tokenizer=tokenizer,
+                aggregation_strategy="simple"  # Merge subword tokens
+            )
             
-            patterns = [
-                # Dosage patterns
-                {"label": "DOSAGE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "mg"}]},
-                {"label": "DOSAGE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "mcg"}]},
-                {"label": "DOSAGE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "ml"}]},
-                {"label": "DOSAGE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "g"}]},
-                {"label": "DOSAGE", "pattern": [{"LIKE_NUM": True}, {"LOWER": {"IN": ["unit", "units"]}}]},
-                
-                # Route patterns
-                {"label": "ROUTE", "pattern": [{"LOWER": "oral"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "orally"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "intravenous"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "intravenously"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "topical"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "topically"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "injection"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "subcutaneous"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": "intramuscular"}]},
-                {"label": "ROUTE", "pattern": [{"LOWER": {"IN": ["iv", "im", "sq", "po"]}}]},
-                
-                # Form patterns
-                {"label": "FORM", "pattern": [{"LOWER": {"IN": ["tablet", "tablets", "tab"]}}]},
-                {"label": "FORM", "pattern": [{"LOWER": {"IN": ["capsule", "capsules", "cap"]}}]},
-                {"label": "FORM", "pattern": [{"LOWER": {"IN": ["syrup", "solution", "suspension"]}}]},
-                {"label": "FORM", "pattern": [{"LOWER": {"IN": ["injection", "injectable"]}}]},
-            ]
-            
-            ruler.add_patterns(patterns)
+            print("Model loaded successfully!")
     
     def extract(self, text: str) -> Dict[str, List[str]]:
         """
-        Extract medical entities from text.
-        
-        Args:
-            text: Input text to analyze
-        
-        Returns:
-            Dictionary with extracted entities:
-            {
-                "drugs": [...],
-                "dosages": [...],
-                "routes": [...],
-                "forms": [...],
-                "all_entities": [...]
-            }
+        Extract medical entities from text using hybrid approach:
+        - Primary: Hugging Face NER (ML-based, context-aware)
+        - Fallback: Regex patterns (for structured data like dosage/weight/age)
         """
+        self._lazy_load()
         
-        doc = self.nlp(text)
+        # Run NER model
+        entities = self.nlp(text)
         
         drugs = []
         dosages = []
@@ -111,38 +59,119 @@ class NERExtractor:
         forms = []
         all_entities = []
         
-        for ent in doc.ents:
+        # Step 1: Extract from NER model
+        for ent in entities:
             entity_info = {
-                "text": ent.text,
-                "label": ent.label_,
-                "start": ent.start_char,
-                "end": ent.end_char
+                "text": ent["word"],
+                "label": ent["entity_group"],
+                "start": int(ent["start"]),
+                "end": int(ent["end"]),
+                "score": float(ent["score"])
             }
             all_entities.append(entity_info)
             
-            # Categorize by type
-            if ent.label_ in ["DRUG", "MEDICATION"]:
-                drugs.append(ent.text)
-            elif ent.label_ == "DOSAGE":
-                dosages.append(ent.text)
-            elif ent.label_ == "ROUTE":
-                routes.append(ent.text)
-            elif ent.label_ == "FORM":
-                forms.append(ent.text)
+            label = ent["entity_group"].upper()
+            entity_text = ent["word"].strip()
+            
+            # Categorize by entity type (using if statements, not elif)
+            if any(keyword in label for keyword in ["DRUG", "MEDICATION", "CHEMICAL", "TREATMENT"]):
+                drugs.append(entity_text)
+            
+            if self._is_dosage(entity_text):
+                dosages.append(entity_text)
+            
+            if any(keyword in label for keyword in ["ROUTE", "ADMINISTRATION"]):
+                routes.append(entity_text)
+            
+            if any(keyword in label for keyword in ["FORM", "DOSAGE_FORM"]):
+                forms.append(entity_text)
         
-        # Remove duplicates while preserving order
+        # Step 2: Regex fallback for structured patterns (always run)
+        dosages.extend(self._extract_dosages(text))
+        weights = self._extract_weights(text)
+        ages = self._extract_ages(text)
+        
+        # Step 3: Regex fallback for routes/forms (always run)
+        routes.extend(self._extract_routes_fallback(text))
+        forms.extend(self._extract_forms_fallback(text))
+        
+        # Remove duplicates from all lists
         drugs = list(dict.fromkeys(drugs))
         dosages = list(dict.fromkeys(dosages))
         routes = list(dict.fromkeys(routes))
         forms = list(dict.fromkeys(forms))
+        weights = list(dict.fromkeys(weights))
+        ages = list(dict.fromkeys(ages))
         
         return {
             "drugs": drugs,
             "dosages": dosages,
             "routes": routes,
             "forms": forms,
+            "weights": weights,
+            "ages": ages,
             "all_entities": all_entities
         }
+    
+    def _is_dosage(self, text: str) -> bool:
+        """Check if text looks like a dosage."""
+        dosage_pattern = r'\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units?)\b'
+        return bool(re.search(dosage_pattern, text, re.IGNORECASE))
+    
+    def _extract_dosages(self, text: str) -> List[str]:
+        """Extract dosage patterns from text."""
+        pattern = r'\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units?)\b'
+        matches = []
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            matches.append(match.group(0))
+        return matches
+    
+    def _extract_weights(self, text: str) -> List[str]:
+        """Extract weight patterns from text."""
+        pattern = r'\d+\.?\d*\s?(kg|kilograms?|lbs?|pounds?)\b'
+        matches = []
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            matches.append(match.group(0))
+        return matches
+    
+    def _extract_ages(self, text: str) -> List[str]:
+        """Extract age patterns from text (non-overlapping)."""
+        patterns = [
+            r'\d+\s+years?\s+old',
+            r'\d+\s+years?(?!\s+old)',
+            r'age\s+\d+',
+        ]
+        matches = []
+        for pattern in patterns:
+            for match in re.finditer(pattern, text, re.IGNORECASE):
+                matches.append(match.group(0))
+        return matches
+    
+    def _extract_routes_fallback(self, text: str) -> List[str]:
+        """
+        Regex fallback for route extraction.
+        Common administration routes.
+        """
+        routes_pattern = r'\b(oral|orally|intravenous|intravenously|iv|topical|topically|' \
+                        r'subcutaneous|intramuscular|im|sublingual|rectal|nasal|inhaled|' \
+                        r'transdermal|ophthalmic|otic|vaginal|buccal)\b'
+        matches = []
+        for match in re.finditer(routes_pattern, text, re.IGNORECASE):
+            matches.append(match.group(0))
+        return matches
+    
+    def _extract_forms_fallback(self, text: str) -> List[str]:
+        """
+        Regex fallback for form extraction.
+        Common medication forms.
+        """
+        forms_pattern = r'\b(tablet|tablets|tab|capsule|capsules|cap|syrup|solution|' \
+                       r'suspension|injection|injectable|cream|ointment|gel|patch|' \
+                       r'powder|granules|drops|spray|inhaler|suppository|lozenge)\b'
+        matches = []
+        for match in re.finditer(forms_pattern, text, re.IGNORECASE):
+            matches.append(match.group(0))
+        return matches
     
     def extract_batch(self, texts: List[str]) -> List[Dict]:
         """
@@ -154,45 +183,5 @@ class NERExtractor:
         Returns:
             List of extraction results
         """
-        
-        results = []
-        for doc in self.nlp.pipe(texts):
-            # Process each doc (implementation similar to extract())
-            result = self._process_doc(doc)
-            results.append(result)
-        
-        return results
-    
-    def _process_doc(self, doc) -> Dict:
-        """Helper to process a spaCy Doc object."""
-        drugs = []
-        dosages = []
-        routes = []
-        forms = []
-        all_entities = []
-        
-        for ent in doc.ents:
-            entity_info = {
-                "text": ent.text,
-                "label": ent.label_,
-                "start": ent.start_char,
-                "end": ent.end_char
-            }
-            all_entities.append(entity_info)
-            
-            if ent.label_ in ["DRUG", "MEDICATION"]:
-                drugs.append(ent.text)
-            elif ent.label_ == "DOSAGE":
-                dosages.append(ent.text)
-            elif ent.label_ == "ROUTE":
-                routes.append(ent.text)
-            elif ent.label_ == "FORM":
-                forms.append(ent.text)
-        
-        return {
-            "drugs": list(dict.fromkeys(drugs)),
-            "dosages": list(dict.fromkeys(dosages)),
-            "routes": list(dict.fromkeys(routes)),
-            "forms": list(dict.fromkeys(forms)),
-            "all_entities": all_entities
-        }
+        self._lazy_load()
+        return [self.extract(text) for text in texts]

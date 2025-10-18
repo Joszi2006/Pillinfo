@@ -1,114 +1,187 @@
 """
-Text Processor Service - SHARED by both text and image streams
-Single Responsibility: Process text through NER + Fuzzy matching
+Text Processor Service - SHARED by both text and image streams (FIXED VERSION)
+Single Responsibility: Process text through NER + Fuzzy matching + Data transformation
 """
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from backend.ml.ner_extractor import NERExtractor
 from backend.ml.fuzzy_matcher import FuzzyMatcher
-from backend.util import log_successful_extraction  # ← Use utility function!
+import re
+
+# Configuration constants
+MIN_WEIGHT_KG = 1.0  # Minimum reasonable weight in kg
+MAX_WEIGHT_KG = 500.0  # Maximum reasonable weight in kg
+MIN_AGE_YEARS = 0  # Minimum age in years
+MAX_AGE_YEARS = 120  # Maximum age in years
+LBS_TO_KG_CONVERSION = 0.453592  # Conversion factor
 
 class TextProcessor:
     """
     Processes text through NER and fuzzy matching.
-    This is SHARED by both input streams:
-    - Stream 1 (Text): User types → TextProcessor
-    - Stream 2 (Image): OCR extracts → TextProcessor
     
-    Single Responsibility: Extract and correct drug information from text
+    Responsibilities:
+    1. Extract entities (via NER)
+    2. Correct typos (via fuzzy matching)
+    3. Transform/convert extracted data to usable formats
     """
     
     def __init__(self):
         self.ner_extractor = NERExtractor()
         self.fuzzy_matcher = FuzzyMatcher()
     
-    def process_text(self, text: str, use_ner: bool = True, log_success: bool = False) -> Dict:
+    def process_text(self, text: str, use_ner: bool = True) -> Dict:
         """
-        Process text through NER and fuzzy correction.
-        This is the SHARED logic for both streams!
+        Process text to extract and transform drug information and patient data.
         
         Args:
-            text: Input text (from user OR from OCR)
+            text: Input text from user or OCR
             use_ner: Whether to use NER extraction
-            log_success: Whether to log successful extractions for active learning
             
         Returns:
-            Dictionary with extracted and corrected information
+            Dictionary with extracted and transformed data
         """
         if not use_ner:
-            # Simple mode: just return the text as brand name
             return {
                 "brand_name": text.strip(),
                 "dosage": None,
+                "dosage_numeric": None,
                 "route": None,
                 "form": None,
+                "weight_kg": None,
+                "age_years": None,
                 "entities": None,
-                "correction": None
+                "correction": None,
+                "all_drugs": []
             }
         
-        # Step 1: Extract entities with MedSpacy
+        # Step 1: Extract all entities using NER (returns raw strings)
         entities = self.ner_extractor.extract(text)
         
-        # Step 2: If NER finds no drugs, try fuzzy matching on the entire text
-        if not entities.get("drugs"):
-            # Fallback: Try fuzzy matching on the input text
-            correction = self.fuzzy_matcher.correct_drug_name(text.strip())
-            
-            if correction.get("corrected") and correction.get("confidence", 0) > 0.6:
-                # Fuzzy matching found a match!
-                return {
-                    "brand_name": correction["corrected"],
-                    "dosage": None,
-                    "route": None,
-                    "form": None,
-                    "entities": entities,
-                    "correction": correction,
-                    "original_text": text
-                }
-            
-            # No drugs found by either method
+        # Step 2: Handle drug extraction and correction
+        drugs = entities.get("drugs", [])
+        
+        if not drugs:
             return {
                 "brand_name": None,
                 "dosage": None,
+                "dosage_numeric": None,
                 "route": None,
                 "form": None,
+                "weight_kg": None,
+                "age_years": None,
                 "entities": entities,
                 "correction": None,
+                "all_drugs": [],
                 "error": "No drug names detected"
             }
         
-        # Get first extracted drug
-        extracted_drug = entities["drugs"][0]
-        extracted_dosage = entities["dosages"][0] if entities.get("dosages") else None
-        extracted_route = entities["routes"][0] if entities.get("routes") else None
-        extracted_form = entities["forms"][0] if entities.get("forms") else None
+        # Process the first drug (primary)
+        extracted_drug = drugs[0]
         
-        # Step 3: Correct drug name with fuzzy matching
+        # Always run through fuzzy matcher to correct typos
         correction = self.fuzzy_matcher.correct_drug_name(extracted_drug)
-        final_drug_name = correction["corrected"]
+        final_drug_name = correction["corrected"] if correction["matched"] else extracted_drug
+    
         
-        result = {
+        # Step 3: Extract and transform other entities
+        dosages = entities.get("dosages", [])
+        weights = entities.get("weights", [])
+        ages = entities.get("ages", [])
+        routes = entities.get("routes", [])
+        forms = entities.get("forms", [])
+        
+        dosage_str = dosages[0] if dosages else None
+        weight_str = weights[0] if weights else None
+        age_str = ages[0] if ages else None
+        route = routes[0] if routes else None
+        form = forms[0] if forms else None
+        
+        # Convert to numbers with validation
+        dosage_numeric = self._extract_dosage_numeric(dosage_str)
+        weight_kg = self._convert_weight_to_kg(weight_str)
+        age_years = self._convert_age_to_years(age_str)
+        
+        # Step 4: Return all processed data
+        return {
             "brand_name": final_drug_name,
-            "dosage": extracted_dosage,
-            "route": extracted_route,
-            "form": extracted_form,
+            "dosage": dosage_str,
+            "dosage_numeric": dosage_numeric,
+            "route": route,
+            "form": form,
+            "weight_kg": weight_kg,
+            "age_years": age_years,
             "entities": entities,
             "correction": correction,
+            "all_drugs": drugs,
             "original_text": text
         }
+    
+    def _extract_dosage_numeric(self, dosage_str: str) -> Optional[float]:
+        """
+        Extract numeric value from dosage string (e.g., '200mg' -> 200.0)
         
-        # Log successful extraction for Active Learning
-        if log_success and final_drug_name:
-            log_successful_extraction(
-                text=text,
-                brand_name=final_drug_name,
-                dosage=extracted_dosage,
-                route=extracted_route,
-                form=extracted_form,
-                confidence=correction.get("confidence", 0)
-            )
+        Returns None if no valid number found or if value is unreasonable.
+        """
+        if not dosage_str:
+            return None
         
-        return result
+        match = re.search(r'(\d+\.?\d*)', dosage_str)
+        if match:
+            value = float(match.group(1))
+            # Validate reasonable dosage range (0.01mg to 10000mg)
+            if 0.01 <= value <= 10000:
+                return value
         
+        return None
+    
+    def _convert_weight_to_kg(self, weight_str: str) -> Optional[float]:
+        """
+        Convert weight string to kg (e.g., '52kg' -> 52.0, '120lbs' -> 54.4)
+        
+        Returns None if conversion fails or value is outside reasonable range.
+        """
+        if not weight_str:
+            return None
+        
+        match = re.search(r'(\d+\.?\d*)\s*([a-z]+)', weight_str, re.IGNORECASE)
+        if not match:
+            return None
+        
+        value = float(match.group(1))
+        unit = match.group(2).lower()
+        
+        # Convert lbs to kg if needed
+        if 'lb' in unit or 'pound' in unit:
+            value = value * LBS_TO_KG_CONVERSION
+        
+        # Validate reasonable weight range
+        if MIN_WEIGHT_KG <= value <= MAX_WEIGHT_KG:
+            return round(value, 2)  # Round to 2 decimal places
+        
+        return None
+    
+    def _convert_age_to_years(self, age_str: str) -> Optional[int]:
+        """
+        Convert age string to years (e.g., '14 years old' -> 14)
+        
+        Returns None if conversion fails or value is outside reasonable range.
+        """
+        if not age_str:
+            return None
+        
+        match = re.search(r'(\d+)', age_str)
+        if not match:
+            return None
+        
+        age = int(match.group(1))
+        
+        # Validate reasonable age range
+        if MIN_AGE_YEARS <= age <= MAX_AGE_YEARS:
+            return age
+        
+        return None
+    
     def inject_cache(self, cache_dict: Dict):
-        """Inject cache into fuzzy matcher."""
+        """Inject cache into fuzzy matcher for typo correction."""
         self.fuzzy_matcher.set_cache(cache_dict)
+    
+    
