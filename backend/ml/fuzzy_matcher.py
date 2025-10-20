@@ -12,7 +12,7 @@ MAX_THRESHOLD = 100
 
 # Optional logging - won't crash if unavailable
 try:
-    from backend.util import log_mismatch
+    from backend.utilities.util import log_mismatch
     HAS_LOGGING = True
 except ImportError:
     HAS_LOGGING = False

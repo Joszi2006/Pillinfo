@@ -74,7 +74,7 @@ class NERExtractor:
             entity_text = ent["word"].strip()
             
             # Categorize by entity type (using if statements, not elif)
-            if any(keyword in label for keyword in ["DRUG", "MEDICATION", "CHEMICAL", "TREATMENT"]):
+            if any(keyword in label for keyword in ["DRUG", "MEDICATION", "BRAND_NAME"]):
                 drugs.append(entity_text)
             
             if self._is_dosage(entity_text):

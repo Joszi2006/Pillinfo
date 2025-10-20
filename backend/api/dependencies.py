@@ -3,7 +3,7 @@ Dependency Injection
 Single Responsibility: Provide dependency instances
 """
 from backend.services.drug_lookup_service import DrugLookupService
-from backend.services.dosage_calculator import DosageCalculator
+from backend.utilities.dosage_calculator import DosageCalculator
 from backend.services.cache_service import CacheService
 from backend.services.rxnorm_service import RxNormService
 from backend.services.ocr_service import OCRService

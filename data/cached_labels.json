@@ -1,16 +1,40 @@
 {
-  "Advil": [
-    "Advil 200 MG Oral Tablet",
-    "Advil 20 MG/ML Oral Suspension",
-    "Advil 40 MG/ML Oral Suspension",
-    "Advil 200 MG Oral Capsule",
-    "Advil 100 MG Oral Tablet",
-    "Advil 100 MG Chewable Tablet"
-  ],
-  "Lipitor": [
-    "Lipitor 80 MG Oral Tablet",
-    "Lipitor 10 MG Oral Tablet",
-    "Lipitor 20 MG Oral Tablet",
-    "Lipitor 40 MG Oral Tablet"
-  ]
+  "Tylenol": {
+    "brand_name": "Tylenol",
+    "generic_name": "acetaminophen",
+    "products": [
+      {
+        "name": "Tylenol 650 MG 8 HR Extended Release Oral Tablet",
+        "rxcui": "1243440"
+      },
+      {
+        "name": "Tylenol 325 MG Oral Capsule",
+        "rxcui": "1738139"
+      },
+      {
+        "name": "Tylenol 325 MG Oral Tablet",
+        "rxcui": "209387"
+      },
+      {
+        "name": "Tylenol 500 MG Oral Tablet",
+        "rxcui": "209459"
+      },
+      {
+        "name": "Tylenol 160 MG Oral Powder",
+        "rxcui": "2178758"
+      },
+      {
+        "name": "Tylenol 500 MG Oral Powder",
+        "rxcui": "2374361"
+      },
+      {
+        "name": "Tylenol 32 MG/ML Oral Suspension",
+        "rxcui": "828555"
+      },
+      {
+        "name": "Tylenol 160 MG Chewable Tablet",
+        "rxcui": "828557"
+      }
+    ]
+  }
 }

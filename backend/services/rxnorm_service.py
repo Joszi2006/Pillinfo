@@ -25,7 +25,6 @@ class RxNormService:
     async def get_drug_details(self, brand_name: str) -> Optional[Dict]:
         """
         Get comprehensive drug details.
-        THIS IS THE ONLY PUBLIC METHOD YOU NEED!
         
         Args:
             brand_name: Brand name to look up
@@ -34,7 +33,6 @@ class RxNormService:
             {
                 "brand_name": str,
                 "generic_name": str,
-                "rxcui": str,
                 "products": [
                     {"name": str, "rxcui": str, "tty": str}
                 ]
@@ -53,7 +51,6 @@ class RxNormService:
         return {
             "brand_name": brand_name,
             "generic_name": generic_name,
-            "rxcui": products[0]["rxcui"],
             "products": products
         }
     
@@ -91,22 +88,19 @@ class RxNormService:
             return []
     
     async def _get_generic_name(self, rxcui: str) -> Optional[str]:
-        """
-        Get generic name from RXCUI.
-        PRIVATE - only called by get_drug_details()
-        """
+        """Get generic name from RXCUI."""
         url = f"{self.BASE_URL}/rxcui/{rxcui}/related.json"
-        params = {"tty": "IN+MIN"}  # IN = ingredient
+        params = {"tty": "IN"}
         
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(
-                    url,
-                    params=params,
-                    headers=self.headers
-                )
+                response = await client.get(url, params=params, headers=self.headers)
                 response.raise_for_status()
                 data = response.json()
+                
+                # ✅ ADD LOGGING
+                print(f"Generic name lookup for RXCUI {rxcui}")
+                print(f"Response: {data}")
                 
                 concept_groups = data.get("relatedGroup", {}).get("conceptGroup", [])
                 
@@ -114,8 +108,11 @@ class RxNormService:
                     if group.get("tty") in ["IN", "MIN"]:
                         concepts = group.get("conceptProperties", [])
                         if concepts:
-                            return concepts[0].get("name")
+                            generic = concepts[0].get("name")
+                            print(f"Found generic name: {generic}")
+                            return generic
                 
+                print(f"No generic name found for RXCUI {rxcui}")
                 return None
         
         except Exception as e:
@@ -128,23 +125,13 @@ class RxNormService:
         PRIVATE - only called by _fetch_products()
         """
         products = []
-        seen_names = set()
         
         concept_groups = data.get("drugGroup", {}).get("conceptGroup", [])
         
         for group in concept_groups:
-            tty = group.get("tty", "")
-            if tty in ["SBD", "BN", "SCD", "BPCK", "GPCK"]:
-                for concept in group.get("conceptProperties", []):
-                    name = concept.get("synonym") or concept.get("name")
-                    rxcui = concept.get("rxcui")
-                    
-                    if name and rxcui and name not in seen_names:
-                        products.append({
-                            "name": name,
-                            "rxcui": rxcui,
-                            "tty": tty
-                        })
-                        seen_names.add(name)
-        
+            for concept in group.get("conceptProperties", []):
+                name = concept.get("synonym") or concept.get("name")
+                rxcui = concept.get("rxcui")
+                if name and rxcui:
+                    products.append({"name": name, "rxcui": rxcui})
         return products

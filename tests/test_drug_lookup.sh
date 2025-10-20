@@ -25,9 +25,13 @@ sleep 3
 
 # Send request to correct endpoint
 echo "Sending request to /lookup/manual..."
+# Clear cache (restart server or call clear endpoint)
+curl -X POST http://localhost:8001/cache/clear
+
+# Test again
 curl -X POST http://localhost:8001/lookup/text \
   -H "Content-Type: application/json" \
-  -d '{"text": "I need Advil 200mg. I weigh 52kg", "use_ner": true}'
+  -d '{"text": "I have Tylenol 200MG Oral Tablet", "use_ner": true, "lookup_all_drugs": false}'
 echo -e "\n"
 
 # Kill server
