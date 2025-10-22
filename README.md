@@ -54,9 +54,9 @@ graph TD
     C -.-> H[NER + Fuzzy Matcher]
     E -.-> I[RxNorm + OpenFDA]
 ```
-Tech Stack
+## Tech Stack
 
-# Backend:
+Backend:
 
 FastAPI (Python)
 Anthropic Claude API (OCR only)
@@ -64,18 +64,18 @@ Hugging Face Transformers (Medical NER)
 RxNorm API (Drug database)
 OpenFDA API (Label information)
 
-# ML/NLP:
+ML/NLP:
 
 Custom NER extractor (Clinical-AI-Apollo/Medical-NER)
 Fuzzy matching (RapidFuzz)
 Regex-based fallback patterns
 
-# Image Processing:
+Image Processing:
 
 Pillow (optimization)
 Base64 encoding for API transport
 
-# Data Management:
+Data Management:
 
 httpx (async API calls)
 JSON caching system
