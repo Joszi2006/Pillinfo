@@ -4,7 +4,7 @@ Single Responsibility: Handle all cache operations
 """
 from typing import List, Dict, Optional
 from backend.utilities.util import load_cached_labels, save_cached_labels, get_cache_stats
-from backend.services.rxnorm_service import RxNormService
+from backend.services.drug_lookup.rxnorm_service import RxNormService
 import logging
 
 logger = logging.getLogger(__name__)

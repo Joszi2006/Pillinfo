@@ -4,8 +4,8 @@ Hybrid Dosage Service - Combines OpenFDA + Calculator
 
 import re
 from typing import Dict, Optional
-from backend.services.openfda_service import OpenFDAService
-from backend.utilities.dosage_calculator import DosageCalculator
+from backend.services.drug_lookup.openfda_service import OpenFDAService
+from backend.services.dosage.dosage_calculator import DosageCalculator
 
 
 class DosageService:
@@ -140,26 +140,26 @@ class DosageService:
         # --- Step 1: Try FDA data ---
         fda_info = await self.openfda_service.get_drug_info(drug_name, generic_name)
         dosage_field = fda_info.get("dosage_and_administration", "")
-        pediatric_field = fda_info.get("pediatric_use", "")
+        purpose = fda_info.get("purpose", "")
         if fda_info and dosage_field:
             if isinstance(dosage_field, list):
                 dosage_text = " ".join(str(v) for v in dosage_field)
             else:
                 dosage_text = str(dosage_field)
-            if isinstance(pediatric_field, list):
-                pediatric_text = " ".join(str(v) for v in pediatric_field)
+            if isinstance(purpose, list):
+                purpose_text = " ".join(str(v) for v in purpose)
             else:
-                pediatric_text = str(pediatric_field)
-            full_text = f"{dosage_text} {pediatric_text}"
+                purpose_text = str(purpose)
+            full_text = f"{purpose_text} {dosage_text}"
 
             if self._is_restricted(full_text):
-                return {**base_result, **self._build_restricted_response(fda_info, dosage_text, pediatric_text)}
+                return {**base_result, **self._build_restricted_response(fda_info, dosage_text, purpose_text)}
 
             weight_based = self._is_weight_based(dosage_text)
-            return {**base_result, **self._build_fda_response(fda_info, dosage_text, pediatric_text, weight_based)}
+            return {**base_result, **self._build_fda_response(fda_info, dosage_text, purpose_text, weight_based)}
 
         # --- Step 2: Fallback to calculator ---
-        if adult_dose_mg:
+        if adult_dose_mg and (patient_age_months or patient_age or patient_weight_kg):
             try:
                 calculated = self.dosage_calculator.calculate_pediatric_dosage(
                     adult_dose_mg, patient_weight_kg, patient_age

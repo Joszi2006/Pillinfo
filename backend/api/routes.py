@@ -3,11 +3,11 @@ API Routes - Orchestrates the correct flow (FIXED VERSION)
 """
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 from pydantic import BaseModel, Field
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from functools import lru_cache
 from backend.services.text_processor import TextProcessor
-from backend.services.drug_lookup_service import DrugLookupService
-from backend.services.dosage_service import DosageService
+from backend.services.drug_lookup.drug_lookup_service import DrugLookupService
+from backend.services.dosage.dosage_service import DosageService
 from backend.services.ocr_service import OCRService
 from backend.services.cache_service import CacheService
 from backend.utilities.message_generator import MessageGenerator
@@ -55,21 +55,19 @@ def get_message_generator():
 
 class TextLookupRequest(BaseModel):
     text: str = Field(..., description="User input text", min_length=1, max_length=1000)
-    patient_weight_kg: Optional[float] = Field(None, gt=0, lt=500, description="Weight in kg (1-500)")
-    patient_age: Optional[int] = Field(None, gt=0, lt=120, description="Age in years (1-120)")
     use_ner: bool = True
     lookup_all_drugs : bool = False
-
+    
 
 # ==================== SHARED LOGIC ====================
 
 async def _process_drug_lookup(
     processed: Dict,
-    patient_weight_kg: Optional[float],
-    patient_age: Optional[int],
     drug_lookup: DrugLookupService,
     dosage_service: DosageService,
-    msg_gen : MessageGenerator
+    msg_gen : MessageGenerator,
+    user_weight: Optional[float] = None,
+    user_age: Optional[int] = None,
 ) -> Dict:
     """
     Shared drug lookup logic for both text and image streams.
@@ -83,8 +81,8 @@ async def _process_drug_lookup(
         }
     
     # Use extracted weight/age OR fallback to request params
-    patient_weight = processed.get("weight_kg") or patient_weight_kg
-    patient_age = processed.get("age_years") or patient_age
+    patient_weight = processed.get("weight_kg") or user_weight
+    patient_age = processed.get("age_years") or user_age
     dosage_mg = processed.get("dosage_numeric")
     
     user_was_specific = bool(
@@ -112,6 +110,7 @@ async def _process_drug_lookup(
         route=processed.get("route"),
         form=processed.get("form")
     )
+
     
     match_result = drug_lookup.evaluate_product_matches(
     products=products,
@@ -127,15 +126,18 @@ async def _process_drug_lookup(
         match_count=match_result["match_count"]
     )
     
-    dosage_info = await dosage_service.get_dosage_info(
-        drug_name=processed["brand_name"],  
-        generic_name=generic_name,
-        adult_dose_mg= dosage_mg,
-        patient_weight_kg= patient_weight,
-        patient_age= patient_age
-    )
-    cleaned_dosage_info = msg_gen.clean_dosage_info(dosage_info)
+    cleaned_dosage_info = None
+    if match_result["match_type"] == "exact":
+        dosage_info = await dosage_service.get_dosage_info(
+            drug_name=processed["brand_name"],  
+            generic_name=generic_name,
+            adult_dose_mg= dosage_mg,
+            patient_weight_kg= patient_weight,
+            patient_age= patient_age
+        )
+        cleaned_dosage_info = msg_gen.clean_dosage_info(dosage_info)
     
+        
     return {
         "success": True,
         "brand_name": processed["brand_name"],
@@ -192,8 +194,6 @@ async def lookup_from_text(
         # Step 3: Default behavior - lookup first drug only
         result = await _process_drug_lookup(
             processed,
-            request.patient_weight_kg,
-            request.patient_age,
             drug_lookup,
             dosage_service,
             msg_gen
@@ -214,14 +214,15 @@ async def lookup_from_text(
     
 @router.post("/lookup/image")
 async def lookup_from_image(
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     patient_weight_kg: Optional[float] = Form(None),
     patient_age: Optional[int] = Form(None),
     ocr_service: OCRService = Depends(get_ocr_service),
     text_processor: TextProcessor = Depends(get_text_processor),
     drug_lookup: DrugLookupService = Depends(get_drug_lookup_service),
-    dosage_service: DosageService = Depends(get_dosage_service)
-):
+    dosage_service: DosageService = Depends(get_dosage_service),
+    msg_gen: MessageGenerator = Depends(get_message_generator)
+): 
     """
     Stream 2: Image-based drug lookup
     
@@ -238,13 +239,35 @@ async def lookup_from_image(
     if patient_age is not None and (patient_age <= 0 or patient_age >= 120):
         raise HTTPException(status_code=400, detail="patient_age must be between 0 and 120")
     
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+    
+    if len(files) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 images allowed")
+    
+    # Validate all files are images
+    for file in files:
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File {file.filename} is not an image"
+            )
     
     try:
-        # Step 1: OCR - Convert image to text
-        image_bytes = await file.read()
-        ocr_result = ocr_service.process_image(image_bytes)
+        # Step 1: Read all images
+        images_bytes = []
+        for file in files:
+            image_bytes = await file.read()
+            images_bytes.append(image_bytes)
+        
+        print(f"📸 Processing {len(images_bytes)} images in one API call...")
+        
+        # Step 2: Process ALL images together with Claude
+        ocr_result = ocr_service.process_images(images_bytes)
+        
+        print(f"OCR Result:")
+        print(f"Success: {ocr_result['success']}")
+        print(f"Text: {ocr_result.get('corrected_text', 'NO TEXT')}")
         
         if not ocr_result["success"]:
             return {
@@ -253,29 +276,31 @@ async def lookup_from_image(
                 "ocr_result": ocr_result
             }
         
-        # Step 2: Process text (SAME AS TEXT STREAM!)
+        # Process the combined text from all images
         processed = text_processor.process_text(
             ocr_result["corrected_text"], 
             use_ner=True
         )
         
-        # Step 3-6: Shared logic
+        # Drug lookup
         result = await _process_drug_lookup(
             processed,
-            patient_weight_kg,
-            patient_age,
             drug_lookup,
-            dosage_service
+            dosage_service,
+            msg_gen,
+            patient_weight_kg,
+            patient_age
         )
         
-        # Add OCR result to response
+        # Add metadata
+        result["images_processed"] = len(files)
         result["ocr_result"] = ocr_result
         
         return result
     
     except Exception as e:
+        print(f"ERROR: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 @router.get("/health")

@@ -29,10 +29,9 @@ echo "Sending request to /lookup/manual..."
 curl -X POST http://localhost:8001/cache/clear
 
 # Test again
-curl -X POST http://localhost:8001/lookup/text \
+curl -X POST http://localhost:8001/lookup/text\
   -H "Content-Type: application/json" \
-  -d '{"text": "I have Tylenol 200MG Oral Tablet", "use_ner": true, "lookup_all_drugs": false}'
-echo -e "\n"
+  -d '{"text": "I have a Advil 40MG/ML Oral suspension", "use_ner": true, "lookup_all_drugs": false}'
 
 # Kill server
 kill $SERVER_PID 2>/dev/null

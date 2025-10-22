@@ -1,39 +1,31 @@
 {
-  "Tylenol": {
-    "brand_name": "Tylenol",
-    "generic_name": "acetaminophen",
+  "Advil": {
+    "brand_name": "Advil",
+    "generic_name": "ibuprofen",
     "products": [
       {
-        "name": "Tylenol 650 MG 8 HR Extended Release Oral Tablet",
-        "rxcui": "1243440"
+        "name": "Advil 200 MG Oral Tablet",
+        "rxcui": "153008"
       },
       {
-        "name": "Tylenol 325 MG Oral Capsule",
-        "rxcui": "1738139"
+        "name": "Advil 20 MG/ML Oral Suspension",
+        "rxcui": "206878"
       },
       {
-        "name": "Tylenol 325 MG Oral Tablet",
-        "rxcui": "209387"
+        "name": "Advil 40 MG/ML Oral Suspension",
+        "rxcui": "731531"
       },
       {
-        "name": "Tylenol 500 MG Oral Tablet",
-        "rxcui": "209459"
+        "name": "Advil 200 MG Oral Capsule",
+        "rxcui": "731533"
       },
       {
-        "name": "Tylenol 160 MG Oral Powder",
-        "rxcui": "2178758"
+        "name": "Advil 100 MG Oral Tablet",
+        "rxcui": "731535"
       },
       {
-        "name": "Tylenol 500 MG Oral Powder",
-        "rxcui": "2374361"
-      },
-      {
-        "name": "Tylenol 32 MG/ML Oral Suspension",
-        "rxcui": "828555"
-      },
-      {
-        "name": "Tylenol 160 MG Chewable Tablet",
-        "rxcui": "828557"
+        "name": "Advil 100 MG Chewable Tablet",
+        "rxcui": "731536"
       }
     ]
   }

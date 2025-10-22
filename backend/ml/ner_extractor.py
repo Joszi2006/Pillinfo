@@ -86,12 +86,12 @@ class NERExtractor:
             if any(keyword in label for keyword in ["FORM", "DOSAGE_FORM"]):
                 forms.append(entity_text)
         
-        # Step 2: Regex fallback for structured patterns (always run)
+        # Regex fallback for structured patterns (always run)
         dosages.extend(self._extract_dosages(text))
         weights = self._extract_weights(text)
         ages = self._extract_ages(text)
         
-        # Step 3: Regex fallback for routes/forms (always run)
+        # Regex fallback for routes/forms (always run)
         routes.extend(self._extract_routes_fallback(text))
         forms.extend(self._extract_forms_fallback(text))
         
@@ -115,12 +115,12 @@ class NERExtractor:
     
     def _is_dosage(self, text: str) -> bool:
         """Check if text looks like a dosage."""
-        dosage_pattern = r'\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units?)\b'
+        dosage_pattern = r'\b\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units)\b'
         return bool(re.search(dosage_pattern, text, re.IGNORECASE))
     
     def _extract_dosages(self, text: str) -> List[str]:
         """Extract dosage patterns from text."""
-        pattern = r'\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units?)\b'
+        pattern = r'\b\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units?)\b'
         matches = []
         for match in re.finditer(pattern, text, re.IGNORECASE):
             matches.append(match.group(0))

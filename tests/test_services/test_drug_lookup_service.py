@@ -1,5 +1,5 @@
 import pytest
-from backend.services.drug_lookup_service import DrugLookupService
+from backend.services.drug_lookup.drug_lookup_service import DrugLookupService
 
 class TestDrugLookupService:
     """Test the SIMPLIFIED drug lookup service."""
