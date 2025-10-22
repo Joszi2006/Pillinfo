@@ -9,10 +9,10 @@ __pycache__/
 # =============================================================================
 # Cache & Data Files
 # =============================================================================
-data/cached_labels.json
-data/mismatches.log
-data/*.json
-data/*.log
+# data/cached_labels.json
+# data/mismatches.log
+# data/*.json
+# data/*.log
 
 # Logs
 logs/

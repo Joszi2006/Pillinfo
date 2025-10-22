@@ -28,7 +28,7 @@ echo "Sending request to /lookup/manual..."
 # Clear cache (restart server or call clear endpoint)
 curl -X POST http://localhost:8001/cache/clear
 
-# Test again
+Test again
 curl -X POST http://localhost:8001/lookup/text\
   -H "Content-Type: application/json" \
   -d '{"text": "I have a Advil 40MG/ML Oral suspension", "use_ner": true, "lookup_all_drugs": false}'
