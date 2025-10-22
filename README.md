@@ -118,19 +118,19 @@ Administration routes (oral, topical, etc.)
 Personalized dosage calculations
 FDA safety warnings and restrictions
 
-# Smart Matching:
+### Smart Matching:
 
 Handles dosage variations (200mg, 200 MG, 200 mg/ml)
 Distinguishes between exact and partial matches
 Provides guidance when multiple products match
 
-# Optimization:
+### Optimization:
 
 Caching layer for common drug queries
 Async API calls for performance
 Image optimization to reduce API costs
 
-## Future Improvements
+### Future Improvements
 Train custom OCR model - Replace Claude API by retraining open-source OCR models (Tesseract, EasyOCR) on pharmaceutical packaging dataset to reduce costs and improve speed
 Multilingual support - Extend NER models to handle drug names in Spanish, French, Arabic
 Voice interface - Add speech-to-text for accessibility
