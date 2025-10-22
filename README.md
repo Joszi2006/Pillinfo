@@ -1,11 +1,11 @@
-## Pillinfo
-# The Problem
+# Pillinfo
+### The Problem
 Many people struggle to understand the medications they're prescribed or buy over-the-counter. Drug packaging is confusing, medical terminology is intimidating, and medication misuse leads to serious health risks. In regions with limited healthcare access, getting quick and reliable drug information is nearly impossible.
 
-# The Solution
+### The Solution
 Pillinfo is an AI-powered drug information system that helps users identify medications and understand their proper usage. Users can input a drug name or upload photos of packaging from multiple angles, and the system returns:
 
-# What the drug treats
+### What the drug treats
 Proper dosage information
 Administration routes and forms
 Personalized dosage calculations (based on weight/age)
@@ -13,10 +13,10 @@ Safety warnings and restrictions
 
 ## The Journey
 
-The Vision
+### The Vision
 I set out to build this entire system without relying on LLMs - I wanted to create something using traditional ML models, custom NER extractors, and open-source tools. I spent over a month coding the pipeline from scratch, building modular services that each handled a specific responsibility.
 
-The Struggle
+### The Struggle
 Everything was coming together beautifully - the NER extraction, fuzzy matching for typo correction, drug lookup, dosage calculations - until I hit the OCR wall.
 The free OCR models I tried were either:
 
