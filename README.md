@@ -13,10 +13,10 @@ Safety warnings and restrictions
 
 ## The Journey
 
-# The Vision
+The Vision
 I set out to build this entire system without relying on LLMs - I wanted to create something using traditional ML models, custom NER extractors, and open-source tools. I spent over a month coding the pipeline from scratch, building modular services that each handled a specific responsibility.
 
-# The Struggle
+The Struggle
 Everything was coming together beautifully - the NER extraction, fuzzy matching for typo correction, drug lookup, dosage calculations - until I hit the OCR wall.
 The free OCR models I tried were either:
 
@@ -42,29 +42,18 @@ Multi-image processing: Sending all package photos to Claude in one API call for
 Smart caching: Reducing API calls by caching common drug lookups
 
 # Architecture
-Modular Service Design:
-┌─────────────────┐        ┌─────────────────┐
-│   Text Input    │        │  Image Upload   │
-└────────┬────────┘        └────────┬────────┘
-         │                          │
-         │                          ↓
-         │                  ┌─────────────────┐
-         │                  │  OCR Service    │ ← Claude API
-         │                  └────────┬────────┘
-         │                           │
-         └──────────┬────────────────┘
-                    ↓
-            ┌─────────────────┐
-            │ Text Processor  │ ← NER Extractor + Fuzzy Matcher
-            └────────┬────────┘
-                     ↓
-            ┌─────────────────┐
-            │ Drug Lookup     │ ← RxNorm + OpenFDA APIs
-            └────────┬────────┘
-                     ↓
-            ┌─────────────────┐
-            │ Dosage Service  │ ← Personalized calculations
-            └─────────────────┘
+```mermaid
+graph TD
+    A[Text Input] --> C[Text Processor]
+    B[Image Upload] --> D[OCR Service]
+    D --> C
+    C --> E[Drug Lookup]
+    E --> F[Dosage Service]
+    
+    D -.-> G[Claude API]
+    C -.-> H[NER + Fuzzy Matcher]
+    E -.-> I[RxNorm + OpenFDA]
+```
 Tech Stack
 
 # Backend:
