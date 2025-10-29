@@ -96,7 +96,7 @@ class CacheService:
             "Metformin", "Lantus", "Humalog", "Januvia", "Glipizide",
             
             # Pain/Inflammation
-            "Advil", "Tylenol", "Aspirin", "Ibuprofen", "Naproxen",
+            "Advil", "Tylenol", "Aspirin", "Naproxen",
             "Celebrex", "Tramadol",
             
             # Respiratory

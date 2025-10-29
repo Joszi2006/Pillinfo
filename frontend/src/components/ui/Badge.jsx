@@ -7,7 +7,7 @@ const Badge = ({ children, variant = 'blue' }) => {
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold ${variants[variant]} relative overflow-hidden`}>
       {variant === 'blue' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" 
+        <div className="absolute inset-0 bg-linear-to-br from-white/20 to-transparent" 
              style={{ transform: 'rotate(45deg)' }} />
       )}
       <span className="relative z-10">{children}</span>

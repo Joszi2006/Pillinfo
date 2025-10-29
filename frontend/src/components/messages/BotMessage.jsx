@@ -7,7 +7,7 @@ const BotMessage = ({ response }) => {
   const { success, brand_name, best_match, matched_products, message, dosage_info } = response;
 
   return (
-    <div className="flex gap-3 mb-5 animate-[slideIn_0.3s_ease-out]">
+    <div className="flex gap-3 m-5 animate-[slideIn_0.3s_ease-out]">
       <Avatar size="md" />
       
       <div className="flex-1 max-w-[80%]">

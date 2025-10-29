@@ -6,11 +6,35 @@ const Avatar = ({ size = 'md' }) => {
   };
 
   return (
-    <div className={`${sizeClasses[size]} flex-shrink-0 rounded-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.25)] flex items-center justify-center relative overflow-hidden`}>
-      <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-transparent" 
-           style={{ transform: 'rotate(45deg)' }} />
-      <svg className="w-6 h-6 text-white z-10" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+    <div className={`${sizeClasses[size]} shrink-0 rounded-full bg-linear-to-br from-blue-400 via-blue-500 to-blue-700 shadow-lg flex items-center justify-center relative overflow-hidden`}>
+      {/* Glossy overlay */}
+      <div className="absolute inset-0 bg-linear-to-br from-white/30 to-transparent" />
+      
+      {/* Pill capsule logo */}
+      <svg className="w-9 h-9 relative z-10" viewBox="0 0 24 24" fill="none">
+        {/* Rounded rectangle - taller than wide, tilted LEFT */}
+        <rect 
+          x="8.5" 
+          y="4" 
+          width="7" 
+          height="16" 
+          rx="3" 
+          stroke="white" 
+          strokeWidth="2.0" 
+          fill="none"
+          transform="rotate(45 12 12)"
+        />
+        {/* Line splitting ACROSS the width (horizontal line through middle) */}
+        <line 
+          x1="9.5" 
+          y1="12" 
+          x2="14.5" 
+          y2="12" 
+          stroke="white" 
+          strokeWidth="2.5" 
+          strokeLinecap="round"
+          transform="rotate(45 12 12)"
+        />
       </svg>
     </div>
   );
