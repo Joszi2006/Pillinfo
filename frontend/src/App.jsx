@@ -3,7 +3,6 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import ChatContainer from './components/layout/ChatContainer';
 import InputArea from './components/layout/InputArea';
-import SwipeHandler from './components/ui/SwipeHandler';
 import WelcomeMessage from './components/messages/WelcomeMessage';
 import UserMessage from './components/messages/UserMessage';
 import BotMessage from './components/messages/BotMessage';
@@ -20,7 +19,6 @@ function App() {
 
   const { lookupByText, lookupByImage, isLoading } = useDrugLookup();
 
-  // Add user message to chat
   const addUserMessage = (text) => {
     const newMessage = {
       id: messageIdCounter,
@@ -32,7 +30,6 @@ function App() {
     return newMessage.id;
   };
 
-  // Add loading message
   const addLoadingMessage = () => {
     const loadingMessage = {
       id: messageIdCounter,
@@ -48,46 +45,35 @@ function App() {
     return currentId;
   };
 
-  // Replace loading message with actual response
   const replaceMessage = (messageId, response) => {
     setMessages((prev) =>
       prev.map((msg) =>
-        msg.id === messageId
-          ? { ...msg, response }
-          : msg
+        msg.id === messageId ? { ...msg, response } : msg
       )
     );
   };
 
-  // Add to recent matches if exact match
   const addToRecentMatches = (response, messageId) => {
     if (response.success && response.match_type === 'exact' && response.drug_info) {
       const drugName = response.drug_info.drug_name || 'Unknown Drug';
-      
-      // Check if already exists
       const exists = recentMatches.some(match => match.drugName === drugName);
       if (!exists) {
         setRecentMatches(prev => [
           { drugName, messageId },
-          ...prev.slice(0, 9) // Keep max 10
+          ...prev.slice(0, 9)
         ]);
       }
     }
   };
 
-  // Handle clicking on recent match
   const handleMatchClick = (match) => {
-    // Close sidebar on mobile
     setIsSidebarOpen(false);
-    
-    // Scroll to that message in chat
     const messageElement = document.getElementById(`message-${match.messageId}`);
     if (messageElement) {
       messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
-  // Handle text message send
   const handleSendMessage = async (text) => {
     addUserMessage(text);
     const loadingId = addLoadingMessage();
@@ -96,49 +82,62 @@ function App() {
     addToRecentMatches(response, loadingId);
   };
 
-  // Handle image upload
-  const handleUploadImages = async (images) => {
-    const imageText = images.length > 1 
-      ? `Uploaded ${images.length} images` 
-      : 'Uploaded 1 image';
-    addUserMessage(imageText);
+  const handleUploadImages = async (images, additionalText) => {
+  const imageText = images.length > 1 
+    ? `Uploaded ${images.length} images` 
+    : 'Uploaded 1 image';
+  addUserMessage(imageText);
 
-    const loadingId = addLoadingMessage();
-    const response = await lookupByImage(images);
-    replaceMessage(loadingId, response);
-    addToRecentMatches(response, loadingId);
-  };
+  const loadingId = addLoadingMessage();
+  const response = await lookupByImage(images, additionalText);
+  replaceMessage(loadingId, response);
+  addToRecentMatches(response, loadingId);
+};
 
-  // Handle quick action clicks
   const handleQuickAction = (action) => {
-    if (typeof action === 'object') {
-      if (action.type === 'upload') {
-        return;
-      }
-      if (action.type === 'prefill') {
-        setInputPrefill(action.text);
-        return;
-      }
+  if (typeof action === 'object') {
+    if (action.type === 'upload') {
+      // Trigger file upload dialog
+      document.querySelector('input[type="file"][accept="image/*"][multiple]')?.click();
+      return;
     }
-    
-    handleSendMessage(action);
-  };
+    if (action.type === 'prefill') {
+      setInputPrefill(action.text);
+      return;
+    }
+  }
+  handleSendMessage(action);
+};
 
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
-      {/* Swipe handler for mobile sidebar */}
-      <SwipeHandler 
-        onSwipeRight={() => setIsSidebarOpen(true)} 
-        isEnabled={!isSidebarOpen}
-      />
+      {/* Floating Sidebar Toggle Button (Mobile Only) */}
+          {!isSidebarOpen && (
+      <button
+        onClick={() => setIsSidebarOpen(true)}
+        className="md:hidden absolute left-4 bottom-24 z-90 w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+      >
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    )}
 
-      {/* Header - Separate and fixed at top */}
-      <Header />
 
-      {/* Unified Container - Below header */}
-      <div className="fixed top-[150px] left-1/2 -translate-x-1/2 w-[calc(100%-120px)] max-w-[1030px] h-[80vh] flex ">
+      {/* Desktop: Header spans full width above everything */}
+      <div className="hidden md:block fixed top-[60px] left-1/2 -translate-x-1/2 w-[calc(100%-120px)] max-w-[1030px] z-50">
+        <Header />
+      </div>
+
+      {/* Main Container */}
+      <div className="fixed top-0 md:top-[165px] left-0 md:left-1/2 md:-translate-x-1/2 w-full md:w-[calc(100%-120px)] md:max-w-[1030px] h-screen md:h-[calc(80vh-105px)] flex flex-col md:flex-row">
         
-        {/* Sidebar - Desktop always visible, Mobile overlay */}
+        {/* Mobile: Header at top */}
+        <div className="md:hidden w-full">
+          <Header />
+        </div>
+
+        {/* Sidebar */}
         <Sidebar 
           recentMatches={recentMatches} 
           onMatchClick={handleMatchClick}
@@ -147,7 +146,7 @@ function App() {
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col bg-white shadow-md md:rounded-r-[20px] rounded-r-[20px] md:rounded-l-none overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white shadow-md md:rounded-br-[20px] overflow-hidden">
           
           {/* Chat Container */}
           <ChatContainer>
@@ -185,9 +184,12 @@ function App() {
 
             {isLoading && (
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-11 h-11 rounded-full bg-linear-to-br from-blue-400 via-blue-500 to-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.25)] flex items-center justify-center animate-pulse">
+                {/* Static blue circle (no animation) */}
+                <div className="w-11 h-11 rounded-full bg-linear-to-br from-blue-400 via-blue-500 to-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.25)] flex items-center justify-center">
                   <div className="w-3 h-3 bg-white rounded-full" />
                 </div>
+                
+                {/* Three bouncing dots */}
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />

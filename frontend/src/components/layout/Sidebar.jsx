@@ -14,21 +14,21 @@ const Sidebar = ({ recentMatches = [], onMatchClick, isOpen = false, onClose }) 
         fixed md:relative
         top-0 md:top-0
         left-0 md:left-0
-        w-[280px]
+        w-[280px] md:w-[280px]
         h-full
         bg-linear-to-br from-blue-400 via-blue-500 to-blue-700
-         md:rounded-bl-[20px]
+        md:rounded-bl-[20px]
         shadow-lg md:shadow-none
         overflow-y-auto hide-scrollbar
         z-160 md:z-auto
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        {/* Glossy overlay effect */}
+        {/* Glossy overlay */}
         <div className="absolute inset-0 bg-linear-to-br from-white/20 to-transparent pointer-events-none" />
 
         {/* Content */}
-        <div className="relative p-6 pt-14">
+        <div className="relative p-6">
           {/* Close button (Mobile only) */}
           <button
             onClick={onClose}
@@ -39,7 +39,7 @@ const Sidebar = ({ recentMatches = [], onMatchClick, isOpen = false, onClose }) 
             </svg>
           </button>
 
-          {/* Recent Matches Section */}
+          {/* Recent Matches */}
           <div className="mb-8 mt-8 md:mt-0">
             <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-4">
               Recent Matches
@@ -52,11 +52,11 @@ const Sidebar = ({ recentMatches = [], onMatchClick, isOpen = false, onClose }) 
                 {recentMatches.map((match, idx) => (
                   <button
                     key={idx}
-                    onClick={() => onMatchClick(match)}
-                    className="w-full text-left p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg border-2 border-transparent hover:border-white/50 transition-all text-sm text-white animate-fadeIn"
-                    style={{
-                      animation: idx === 0 ? 'fadeIn 0.3s ease-out, borderDraw 1.5s ease-out' : 'fadeIn 0.3s ease-out'
+                    onClick={() => {
+                      onMatchClick(match);
+                      onClose(); // Close sidebar on mobile after click
                     }}
+                    className="w-full text-left p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg border-2 border-transparent hover:border-white/50 transition-all text-sm text-white"
                   >
                     {match.drugName}
                   </button>
@@ -64,16 +64,6 @@ const Sidebar = ({ recentMatches = [], onMatchClick, isOpen = false, onClose }) 
               </div>
             )}
           </div>
-
-          {/* Bottom Links */}
-          {/* <div className="mt-auto space-y-2 border-t border-white/20 pt-4">
-            <a href="#" className="block text-sm text-white/90 hover:text-white transition-colors">
-              About Pillinfo
-            </a>
-            <a href="#" className="block text-sm text-white/90 hover:text-white transition-colors">
-              Help
-            </a>
-          </div> */}
         </div>
       </aside>
     </>

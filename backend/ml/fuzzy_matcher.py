@@ -1,278 +1,105 @@
 """
-Fuzzy Matcher - RapidFuzz matching only (CLEAN VERSION)
-Single Responsibility: Fuzzy string matching and correction
+Fuzzy Matcher - Drug Name Typo Correction
+
+Corrects misspellings in drug names using fuzzy string matching.
 """
 from rapidfuzz import process, fuzz
-from typing import Dict, List, Optional, Callable
+from pathlib import Path
+from typing import Optional, List, Dict
+import json
 
 # Configuration constants
-DEFAULT_THRESHOLD = 70
-MIN_THRESHOLD = 0
-MAX_THRESHOLD = 100
-
-# Optional logging - won't crash if unavailable
-try:
-    from backend.utilities.util import log_mismatch
-    HAS_LOGGING = True
-except ImportError:
-    HAS_LOGGING = False
-    log_mismatch = None
+DEFAULT_SIMILARITY_THRESHOLD = 70
+MIN_SIMILARITY_SCORE = 0.0
 
 
 class FuzzyMatcher:
-    """
-    Handles all fuzzy string matching operations.
-    Does NOT handle cache management - that's CacheService's job.
-    """
+    """Corrects typos in drug names"""
     
-    def __init__(
-        self, 
-        threshold: int = DEFAULT_THRESHOLD,
-        scorer: Callable[[str, str], float] = fuzz.WRatio,
-        log_callback: Optional[Callable] = None
-    ):
+    def __init__(self, threshold: int = DEFAULT_SIMILARITY_THRESHOLD):
         """
         Initialize fuzzy matcher.
         
         Args:
             threshold: Minimum similarity score (0-100)
-            scorer: RapidFuzz scoring function
-            log_callback: Optional callback for logging corrections
-        
-        Raises:
-            ValueError: If threshold is outside valid range
         """
-        if not MIN_THRESHOLD <= threshold <= MAX_THRESHOLD:
-            raise ValueError(
-                f"Threshold must be between {MIN_THRESHOLD} and {MAX_THRESHOLD}, got {threshold}"
-            )
-        
         self.threshold = threshold
-        self.scorer = scorer
-        self.cache: Optional[List[str]] = None
-        self.log_callback = log_callback or self._default_logger
+        self.known_drugs = self._load_known_drugs()
     
-    def _default_logger(self, *args, **kwargs):
-        """Default no-op logger."""
-        pass
+    def _load_known_drugs(self) -> set:
+        """Load all known drug names from common_drugs.json."""
+        try:
+            drugs_file = Path(__file__).parent.parent.parent / "data" / "common_drugs.json"
+            with open(drugs_file, 'r') as f:
+                data = json.load(f)
+            
+            all_names = set()
+            for generic, info in data.items():
+                all_names.add(generic.lower())
+                for brand in info["brands"]:
+                    all_names.add(brand.lower())
+            
+            # print(f"Fuzzy matcher loaded {len(all_names)} drug names")
+            return all_names
+            
+        except Exception as e:
+            print(f"Could not load common_drugs.json: {e}")
+            return set()
     
-    def set_cache(self, cache_dict: Dict[str, List[str]]):
+    def correct(self, drug_name: str) -> Optional[str]:
         """
-        Inject cache for matching operations.
-        
-        Args:
-            cache_dict: Dictionary where keys are drug names
-                       (values are ignored - only keys are used for matching)
+        Correct typos in drug name using fuzzy matching.
+        Returns corrected name or None if no match found.
         """
-        self.cache = list(cache_dict.keys()) if cache_dict else []
-    
-    def correct_drug_name(self, drug_name: str) -> Dict:
-        """
-        Correct drug name spelling using fuzzy matching.
-        
-        Case Handling:
-        - Matching is case-insensitive
-        - Returns the cached drug name's case (standardized spelling)
-        - Example: "tylenol" -> "Tylenol" (uses cache's capitalization)
-        
-        Args:
-            drug_name: Drug name to correct (any case)
-        
-        Returns:
-            {
-                "original": str (input as-is),
-                "corrected": str (standardized from cache),
-                "confidence": int (0-100),
-                "matched": bool
-            }
-        """
-        # Validate input
         if not drug_name or not drug_name.strip():
-            return {
-                "original": drug_name,
-                "corrected": "",
-                "confidence": 0,
-                "matched": False
-            }
+            return None
         
-        drug_name_clean = drug_name.strip()
+        cleaned = drug_name.strip().lower()
         
-        # Check if cache is available
-        if not self.cache:
-            return {
-                "original": drug_name,
-                "corrected": drug_name,
-                "confidence": 0,
-                "matched": False
-            }
-        
-        # Try exact match first (case-insensitive) - fastest path
-        for cached_drug in self.cache:
-            if cached_drug.lower() == drug_name_clean.lower():
-                return {
-                    "original": drug_name,
-                    "corrected": cached_drug,
-                    "confidence": 100,
-                    "matched": True
-                }
+        # Exact match (fastest path)
+        if cleaned in self.known_drugs:
+            return drug_name.strip()
         
         # Fuzzy match
-        best_match = process.extractOne(
-            drug_name_clean,
-            self.cache,
-            scorer=self.scorer,
+        result = process.extractOne(
+            cleaned,
+            list(self.known_drugs),
+            scorer=fuzz.WRatio,
             score_cutoff=self.threshold
         )
         
-        if best_match:
-            corrected_name = best_match[0]
-            confidence = best_match[1]
-            
-            # Log the correction (safe - won't crash if logging fails)
-            self._safe_log(drug_name_clean, corrected_name, confidence, "fuzzy_correction")
-            
-            return {
-                "original": drug_name,
-                "corrected": corrected_name,
-                "confidence": confidence,
-                "matched": True
-            }
+        if result:
+            corrected = result[0]
+            confidence = result[1]
+            # print(f"Corrected: '{drug_name}' → '{corrected}' ({confidence:.0f}%)")
+            return corrected
         
-        # No match found
-        return {
-            "original": drug_name,
-            "corrected": drug_name,
-            "confidence": 0,
-            "matched": False
-        }
+        return None
     
-    def _safe_log(self, original: str, corrected: str, confidence: float, log_type: str):
-        """
-        Safely log corrections without crashing if logging fails.
-        Only place we need try-catch - external dependency.
-        """
-        try:
-            if HAS_LOGGING and log_mismatch:
-                log_mismatch(original, corrected, confidence, log_type)
-            else:
-                self.log_callback(original, corrected, confidence, log_type)
-        except Exception:
-            # Silently fail - logging should never crash the application
-            pass
-    
-    def match_product(
-        self, 
-        query: str, 
-        products: List[str],
-        threshold: Optional[int] = None
-    ) -> Optional[str]:
-        """
-        Match a query against a list of product names.
-        
-        Args:
-            query: Search query
-            products: List of product names to match against
-            threshold: Custom threshold (defaults to self.threshold)
-        
-        Returns:
-            Best matching product name or None
-        """
-        if not products or not query or not query.strip():
-            return None
-        
-        # Use instance threshold unless overridden
-        cutoff = threshold if threshold is not None else self.threshold
-        
-        best_match = process.extractOne(
-            query.strip(),
-            products,
-            scorer=self.scorer,
-            score_cutoff=cutoff
-        )
-        
-        return best_match[0] if best_match else None
-    
-    def get_top_matches(
-        self, 
-        query: str, 
-        limit: int = 5
-    ) -> List[Dict]:
-        """
-        Get top N matches for a query.
-        
-        Args:
-            query: Query string
-            limit: Number of results to return
-        
-        Returns:
-            List of match dictionaries sorted by confidence (highest first)
-        """
-        if not self.cache or not query or not query.strip():
-            return []
-        
-        matches = process.extract(
-            query.strip(),
-            self.cache,
-            scorer=self.scorer,
-            limit=limit
-        )
-        
-        return [
-            {
-                "name": match[0],
-                "confidence": match[1]
-            }
-            for match in matches
-        ]
-    
-    def batch_correct(self, drug_names: List[str]) -> List[Dict]:
+    def batch_correct(self, drug_names: List[str]) -> List[Dict[str, any]]:
         """
         Correct multiple drug names efficiently.
-        
-        Args:
-            drug_names: List of drug names to correct
-        
-        Returns:
-            List of correction results (same order as input)
+        Returns list of correction results in same order as input.
         """
         if not drug_names:
             return []
         
-        if not self.cache:
-            return [{
-                "original": name,
-                "corrected": name,
-                "confidence": 0,
-                "matched": False
-            } for name in drug_names]
-        
         results = []
         for drug_name in drug_names:
-            if not drug_name or not drug_name.strip():
-                results.append({
-                    "original": drug_name,
-                    "corrected": "",
-                    "confidence": 0,
-                    "matched": False
-                })
-            else:
-                # Reuse the main method for consistency
-                results.append(self.correct_drug_name(drug_name))
+            corrected = self.correct(drug_name)
+            results.append({
+                "original": drug_name,
+                "corrected": corrected if corrected else drug_name,
+                "matched": corrected is not None
+            })
         
         return results
     
     def similarity_score(self, str1: str, str2: str) -> float:
         """
-        Calculate similarity score between two strings.
-        
-        Args:
-            str1: First string
-            str2: Second string
-        
-        Returns:
-            Similarity score (0-100), or 0 if either string is empty
+        Calculate similarity between two strings (0-100).
+        Useful for future fuzzy operations.
         """
         if not str1 or not str2:
-            return 0.0
-        
-        return float(self.scorer(str1.strip(), str2.strip()))
+            return MIN_SIMILARITY_SCORE
+        return float(fuzz.WRatio(str1.strip(), str2.strip()))

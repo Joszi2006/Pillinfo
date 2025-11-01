@@ -38,8 +38,6 @@ class DrugLookupService:
         # CHECK CACHE
         cached = self.cache_service.get(brand_name)
         if cached:
-            print(f"Cached data type: {type(cached)}")
-            print(f"Cached data: {cached}")
             
             #  HANDLE NEW DICT FORMAT
             if isinstance(cached, dict) and "products" in cached:

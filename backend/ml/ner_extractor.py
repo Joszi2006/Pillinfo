@@ -47,7 +47,7 @@ class NERExtractor:
             text_val = ent["text"].strip()
             
             if label == "medication":
-                drugs.append(text_val)
+                drugs.extend(text_val.split())
             elif label == "dosage":
                 dosages.append(text_val)
             elif label == "route":
@@ -70,17 +70,17 @@ class NERExtractor:
         }
     
     def _extract_dosages(self, text: str) -> List[str]:
-        """Extract dosage patterns (200mg, 10ml, 500mcg)."""
+        """Extract dosage patterns"""
         pattern = r'\b\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units?)\b'
         return [m.group(0) for m in re.finditer(pattern, text, re.IGNORECASE)]
     
     def _extract_weights(self, text: str) -> List[str]:
-        """Extract weight patterns (70kg, 150lbs)."""
+        """Extract weight patterns"""
         pattern = r'\d+\.?\d*\s?(kg|kilograms?|lbs?|pounds?)\b'
         return [m.group(0) for m in re.finditer(pattern, text, re.IGNORECASE)]
     
     def _extract_ages(self, text: str) -> List[str]:
-        """Extract age patterns (25 years old, age 45)."""
+        """Extract age patterns"""
         patterns = [
             r'\d+\s+years?\s+old',
             r'\d+\s+years?(?!\s+old)',
@@ -104,3 +104,4 @@ class NERExtractor:
                   r'suspension|injection|injectable|cream|ointment|gel|patch|' \
                   r'powder|granules|drops|spray|inhaler|suppository|lozenge)\b'
         return [m.group(0) for m in re.finditer(pattern, text, re.IGNORECASE)]
+    

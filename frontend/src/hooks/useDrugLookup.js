@@ -47,52 +47,41 @@ export const useDrugLookup = () => {
   /**
    * Lookup drug by image(s)
    */
-  const lookupByImage = async (images, patientWeightKg = null, patientAge = null) => {
-    setIsLoading(true);
-    setError(null);
+  const lookupByImage = async (images, additionalText) => {
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      const formData = new FormData();
+  try {
+    const formData = new FormData();
+    
+    images.forEach(image => {
+      formData.append('files', image);
+    });
 
-      // Add images to form data
-      if (Array.isArray(images)) {
-        images.forEach((image) => {
-          formData.append('file', image);
-        });
-      } else {
-        formData.append('file', images);
-      }
-
-      // Add optional patient data
-      if (patientWeightKg !== null) {
-        formData.append('patient_weight_kg', patientWeightKg.toString());
-      }
-      if (patientAge !== null) {
-        formData.append('patient_age', patientAge.toString());
-      }
-
-      const response = await fetch(`${API_BASE_URL}/lookup/image`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      const errorMessage = err.message || 'Failed to process image';
-      setError(errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    } finally {
-      setIsLoading(false);
+    // Add text for weight/age extraction
+    if (additionalText) {
+      formData.append('additional_text', additionalText);
     }
-  };
+
+    const response = await fetch(`${API_BASE_URL}/lookup/image`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+
+  } catch (err) {
+    setError(err.message);
+    return { success: false, error: err.message };
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return {
     lookupByText,

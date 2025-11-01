@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const HelpModal = ({ isOpen, onClose }) => {
   const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     if (isOpen && !userLocation) {
-      // Get user's general location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -24,7 +24,8 @@ const HelpModal = ({ isOpen, onClose }) => {
 
   const openPharmacySearch = () => {
     if (userLocation) {
-      window.open(`https://www.google.com/maps/search/pharmacies/@${userLocation.lat},${userLocation.lng},13z`, '_blank');
+      const url = `https://www.google.com/maps/search/pharmacies/@${userLocation.lat},${userLocation.lng},13z`;
+      window.open(url, '_blank');
     } else {
       window.open('https://www.google.com/maps/search/pharmacies+near+me', '_blank');
     }
@@ -32,10 +33,10 @@ const HelpModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-200 flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slideIn" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
+        {/* ... rest of modal content stays the same ... */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-slate-900">Need Help?</h2>
           <button
@@ -48,10 +49,9 @@ const HelpModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Emergency Section */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -62,8 +62,8 @@ const HelpModal = ({ isOpen, onClose }) => {
             </div>
           </div>
           
-          <a
-            href="tel:911"
+          
+            <a href="tel:911"
             className="flex items-center justify-center gap-2 w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,10 +73,9 @@ const HelpModal = ({ isOpen, onClose }) => {
           </a>
         </div>
 
-        {/* Pharmacy Locator */}
         <div>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -96,7 +95,8 @@ const HelpModal = ({ isOpen, onClose }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -1,10 +1,12 @@
+import { createPortal } from 'react-dom';
+
 const InfoModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-200 flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slideIn" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
+        {/* ... rest of your modal content stays exactly the same ... */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-slate-900">About Pillinfo</h2>
           <button
@@ -17,7 +19,6 @@ const InfoModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Content */}
         <div className="text-slate-700 space-y-4">
           <p className="leading-relaxed">
             Pillinfo is your AI-powered medication information assistant. Upload pill images or search by name to get instant, accurate drug information including dosages, side effects, and safety warnings.
@@ -36,7 +37,6 @@ const InfoModal = ({ isOpen, onClose }) => {
           </p>
         </div>
 
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="w-full mt-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors"
@@ -44,7 +44,8 @@ const InfoModal = ({ isOpen, onClose }) => {
           Got it
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

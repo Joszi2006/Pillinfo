@@ -9,18 +9,16 @@ const Header = () => {
 
   return (
     <>
-      <header className="fixed top-[60px] left-1/2 -translate-x-1/2 w-[calc(100%-120px)] max-w-[1030px] h-[89px] md:h-[105px] bg-white backdrop-blur-lg rounded-t-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] border-b border-blue-100 flex items-center justify-between px-8 z-50">
+      <header className="w-full h-[89px] md:h-[105px] bg-white backdrop-blur-lg md:rounded-t-[20px] shadow-md border-b border-blue-100 flex items-center justify-between px-4 md:px-8">
         <div className="flex items-center gap-2 md:gap-3">
-          {/* NEW pill logo */}
           <Avatar size="lg" />
           <div>
-            <h1 className="text-xl md:text-[28px] font-bold text-slate-900 -tracking-[0.5px]">Pillinfo</h1>
+            <h1 className="text-xl md:text-[28px] font-bold text-slate-900">Pillinfo</h1>
             <p className="text-[11px] md:text-[13px] text-slate-500 font-medium hidden sm:block">No.1 Drug Informant</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 md:gap-5">
-          {/* Info Button */}
           <button 
             onClick={() => setIsInfoOpen(true)}
             className="text-slate-500 hover:text-blue-500 transition-colors"
@@ -31,7 +29,6 @@ const Header = () => {
             </svg>
           </button>
           
-          {/* Help Button */}
           <button 
             onClick={() => setIsHelpOpen(true)}
             className="text-slate-500 hover:text-blue-500 transition-colors"
@@ -44,7 +41,6 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Modals */}
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </>

@@ -53,8 +53,8 @@ class TextProcessor:
             }
         
         extracted_drug = drugs[0]
-        correction = self.fuzzy_matcher.correct_drug_name(extracted_drug)
-        final_drug_name = correction["corrected"] if correction["matched"] else extracted_drug
+        final_drug_name  = self.fuzzy_matcher.correct(extracted_drug)
+        
         
         dosages = entities.get("dosages", [])
         weights = entities.get("weights", [])
@@ -82,7 +82,6 @@ class TextProcessor:
             "weight_kg": weight_kg,
             "age_years": age_years,
             "entities": entities,
-            "correction": correction,
             "all_drugs": drugs,
             "original_text": text
         }
@@ -158,5 +157,3 @@ class TextProcessor:
             return age
         return None
     
-    def inject_cache(self, cache_dict: Dict):
-        self.fuzzy_matcher.set_cache(cache_dict)

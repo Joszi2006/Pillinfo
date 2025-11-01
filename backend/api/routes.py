@@ -20,10 +20,7 @@ router = APIRouter()
 @lru_cache()
 def get_text_processor():
     """Singleton: Creates processor once and reuses it."""
-    processor = TextProcessor()
-    cache_service = get_cache_service()
-    processor.inject_cache(cache_service.get_cache_dict())
-    return processor
+    return TextProcessor()
 
 @lru_cache()
 def get_drug_lookup_service():
@@ -76,8 +73,7 @@ async def _process_drug_lookup(
     if not processed.get("brand_name"):
         return {
             "success": False,
-            "error": "No drug name detected",
-            "processed": processed
+            "error": processed["error"]
         }
     
     # Use extracted weight/age OR fallback to request params
@@ -166,11 +162,11 @@ async def lookup_from_text(
     3. (Optional) Calculate dosage if weight provided
     """
     try:
-        # Step 1: Process text (extracts everything)
+        # Process text (extracts everything)
         processed = text_processor.process_text(request.text, request.use_ner)
         all_drugs = processed.get("all_drugs", [])
         
-        # Step 2: Check if multiple drugs detected
+        # Check if multiple drugs detected
         if len(all_drugs) > 1 and request.lookup_all_drugs:
             # User wants ALL drugs - lookup in parallel
             tasks = [drug_lookup.lookup_drug(drug) for drug in all_drugs]
@@ -215,8 +211,7 @@ async def lookup_from_text(
 @router.post("/lookup/image")
 async def lookup_from_image(
     files: List[UploadFile] = File(...),
-    patient_weight_kg: Optional[float] = Form(None),
-    patient_age: Optional[int] = Form(None),
+    additional_text: Optional[str] = Form(None),
     ocr_service: OCRService = Depends(get_ocr_service),
     text_processor: TextProcessor = Depends(get_text_processor),
     drug_lookup: DrugLookupService = Depends(get_drug_lookup_service),
@@ -224,21 +219,16 @@ async def lookup_from_image(
     msg_gen: MessageGenerator = Depends(get_message_generator)
 ): 
     """
-    Stream 2: Image-based drug lookup
+    Image-based drug lookup with optional user text for weight/age
     
     Flow:
     1. Image → OCR Service (Image→Text)
-    2. Extracted text → TextProcessor (NER + Fuzzy)
+    2. OCR text + additional_text → TextProcessor (NER extracts drug + weight + age)
     3. Extracted drug → DrugLookupService (Cache/API)
-    4. (Optional) Calculate dosage if weight provided
+    4. Calculate dosage if weight/age extracted
     """
-    # Validate form data manually since Form() doesn't support validators
-    if patient_weight_kg is not None and (patient_weight_kg <= 0 or patient_weight_kg >= 500):
-        raise HTTPException(status_code=400, detail="patient_weight_kg must be between 0 and 500")
     
-    if patient_age is not None and (patient_age <= 0 or patient_age >= 120):
-        raise HTTPException(status_code=400, detail="patient_age must be between 0 and 120")
-    
+    # Validate files
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
     
@@ -254,20 +244,19 @@ async def lookup_from_image(
             )
     
     try:
-        # Step 1: Read all images
+        #Read all images
         images_bytes = []
         for file in files:
             image_bytes = await file.read()
             images_bytes.append(image_bytes)
         
-        print(f"📸 Processing {len(images_bytes)} images in one API call...")
+        # print(f"Processing {len(images_bytes)} images...")
         
-        # Step 2: Process ALL images together with Claude
+        # Step 2: OCR - Extract text from images
         ocr_result = ocr_service.process_images(images_bytes)
         
-        print(f"OCR Result:")
-        print(f"Success: {ocr_result['success']}")
-        print(f"Text: {ocr_result.get('corrected_text', 'NO TEXT')}")
+        # print(f"OCR Result: {ocr_result['success']}")
+        # print(f"OCR Text: {ocr_result.get('corrected_text', 'NO TEXT')}")
         
         if not ocr_result["success"]:
             return {
@@ -276,32 +265,38 @@ async def lookup_from_image(
                 "ocr_result": ocr_result
             }
         
-        # Process the combined text from all images
-        processed = text_processor.process_text(
-            ocr_result["corrected_text"], 
-            use_ner=True
-        )
+        # Step 3: Combine OCR text + user's additional text
+        combined_text = ocr_result["corrected_text"]
+        if additional_text:
+            combined_text += " " + additional_text
+            print(f"Added user text: {additional_text}")
         
-        # Drug lookup
+        # print(f"Processing combined text: {combined_text}")
+        
+        #NER extraction (extracts drug + weight + age from combined text)
+        processed = text_processor.process_text(combined_text, use_ner=True)
+        
+        # print(f"Extracted - Drug: {processed.get('brand_name')}, Weight: {processed.get('weight_kg')}, Age: {processed.get('age_years')}")
+        
+        # Drug lookup with extracted patient info
         result = await _process_drug_lookup(
             processed,
             drug_lookup,
             dosage_service,
-            msg_gen,
-            patient_weight_kg,
-            patient_age
+            msg_gen
         )
         
         # Add metadata
         result["images_processed"] = len(files)
         result["ocr_result"] = ocr_result
+        if additional_text:
+            result["user_provided_text"] = additional_text
         
         return result
     
     except Exception as e:
         print(f"ERROR: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/health")
 async def health_check(
