@@ -26,12 +26,6 @@ class OCRService:
     def process_images(self, images_bytes: List[bytes]) -> Dict:
         """
         Process multiple images witn CLAUDE API
-        
-        Args:
-            images_bytes: List of image files as bytes
-            
-        Returns:
-            Dictionary with success, corrected_text, and error fields
         """
         try:
             if not images_bytes:

@@ -4,7 +4,7 @@ Hybrid Dosage Service - Combines OpenFDA + Calculator
 
 import re
 from typing import Dict, Optional
-from backend.services.drug_lookup.openfda_service import OpenFDAService
+from backend.services.dosage.openfda_service import OpenFDAService
 from backend.services.dosage.dosage_calculator import DosageCalculator
 
 

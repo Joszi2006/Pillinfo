@@ -36,6 +36,6 @@ sleep 3
 echo "Sending request to /lookup/text..."
 curl -X POST http://localhost:$SERVER_PORT/lookup/text\
   -H "Content-Type: application/json" \
-  -d '{"text": "I have a advel, i weigh 52kg and i am 14 years of age ", "use_ner": true, "lookup_all_drugs": true}'
+  -d '{"text": "I have a Advil 40mg/ml Oral Suspension, i weigh 52kg and i am 14 years of age ", "use_ner": true, "lookup_all_drugs": true}'
 
 # The 'trap cleanup EXIT' command will handle the server shutdown after the curl command finishes.

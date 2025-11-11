@@ -34,7 +34,7 @@ const DrugInfoMessage = ({ drugName, rxcui, dosageInfo }) => {
     <div className="bg-white border border-slate-200 rounded-[20px_20px_20px_4px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden">
       
       {/* Drug Header */}
-      <div className="bg-gradient-to-b from-slate-50 to-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-linear-to-b from-slate-50 to-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <h3 className="text-[20px] font-bold text-slate-900">{drugName}</h3>
         {rxcui && <Badge>RxCUI: {rxcui}</Badge>}
       </div>
@@ -113,8 +113,8 @@ const DrugInfoMessage = ({ drugName, rxcui, dosageInfo }) => {
         )}
 
         {/* View Full Label Button */}
-        <button className="mt-5 px-5 py-2.5 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-700 text-white text-[14px] font-semibold rounded-lg shadow-[0_4px_12px_rgba(37,99,235,0.3)] hover:scale-[1.02] active:scale-95 transition-transform relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" 
+        <button className="mt-5 px-5 py-2.5 bg-linear-to-br from-blue-400 via-blue-500 to-blue-700 text-white text-[14px] font-semibold rounded-lg shadow-[0_4px_12px_rgba(37,99,235,0.3)] hover:scale-[1.02] active:scale-95 transition-transform relative overflow-hidden">
+          <div className="absolute inset-0 bg-linear-to-br from-white/20 to-transparent" 
                style={{ transform: 'rotate(45deg)' }} />
           <span className="relative z-10">View Full FDA Label</span>
         </button>

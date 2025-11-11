@@ -155,11 +155,6 @@ async def lookup_from_text(
 ):
     """
     Text-based drug lookup
-    
-    Flow:
-    1. User text → TextProcessor (NER + Fuzzy)
-    2. Extracted drug → DrugLookupService (Cache/API)
-    3. (Optional) Calculate dosage if weight provided
     """
     try:
         # Process text (extracts everything)
@@ -220,12 +215,6 @@ async def lookup_from_image(
 ): 
     """
     Image-based drug lookup with optional user text for weight/age
-    
-    Flow:
-    1. Image → OCR Service (Image→Text)
-    2. OCR text + additional_text → TextProcessor (NER extracts drug + weight + age)
-    3. Extracted drug → DrugLookupService (Cache/API)
-    4. Calculate dosage if weight/age extracted
     """
     
     # Validate files
@@ -269,7 +258,7 @@ async def lookup_from_image(
         combined_text = ocr_result["corrected_text"]
         if additional_text:
             combined_text += " " + additional_text
-            print(f"Added user text: {additional_text}")
+            # print(f"Added user text: {additional_text}")
         
         # print(f"Processing combined text: {combined_text}")
         
@@ -309,14 +298,6 @@ async def health_check(
         "cache_stats": stats
     }
 
-
-@router.post("/cache/seed")
-async def seed_cache(
-    cache_service: CacheService = Depends(get_cache_service)
-):
-    """Seed cache with common drugs."""
-    result = await cache_service.seed_common_drugs()
-    return result
 
 @router.post("/cache/clear")
 async def clear_cache(

@@ -1,7 +1,5 @@
 """
-NER Extractor - Medical Entity Extraction using GLiNER
-
-Extracts medications, dosages, routes, forms, weights, and ages from text.
+NER Extractor - Medical entity extraction using GLiNER
 """
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -12,7 +10,7 @@ import re
 
 
 class NERExtractor:
-    """Medical entity extraction using GLiNER with regex fallbacks."""
+    """Extract medical entities using GLiNER with regex fallbacks."""
     
     def __init__(self, model_name: str = "anthonyyazdaniml/gliner-biomed-large-v1.0-medication-regimen-ner"):
         self.model_name = model_name
@@ -23,16 +21,12 @@ class NERExtractor:
         if self.model is None:
             print(f"Loading GLiNER: {self.model_name}...")
             self.model = GLiNER.from_pretrained(self.model_name)
-            print("###### Model loaded ######")
+            print("Model loaded successfully")
     
     def extract(self, text: str) -> Dict[str, List[str]]:
-        """
-        Extract medical entities from text.
-        Returns dict with drugs, dosages, routes, forms, weights, and ages.
-        """
+        """Extract medical entities from text."""
         self._lazy_load()
         
-        # Extract entities using GLiNER
         labels = ["medication", "dosage", "route", "form"]
         entities = self.model.predict_entities(text, labels, threshold=0.4)
         
@@ -41,7 +35,6 @@ class NERExtractor:
         routes = []
         forms = []
         
-        # Categorize GLiNER results
         for ent in entities:
             label = ent["label"].lower()
             text_val = ent["text"].strip()
@@ -55,7 +48,6 @@ class NERExtractor:
             elif label == "form":
                 forms.append(text_val)
         
-        # Add regex fallback results
         dosages.extend(self._extract_dosages(text))
         routes.extend(self._extract_routes(text))
         forms.extend(self._extract_forms(text))
@@ -70,17 +62,17 @@ class NERExtractor:
         }
     
     def _extract_dosages(self, text: str) -> List[str]:
-        """Extract dosage patterns"""
+        """Extract dosage patterns."""
         pattern = r'\b\d+\.?\d*\s?(mg|mcg|ml|g|mg/ml|units?)\b'
         return [m.group(0) for m in re.finditer(pattern, text, re.IGNORECASE)]
     
     def _extract_weights(self, text: str) -> List[str]:
-        """Extract weight patterns"""
+        """Extract weight patterns."""
         pattern = r'\d+\.?\d*\s?(kg|kilograms?|lbs?|pounds?)\b'
         return [m.group(0) for m in re.finditer(pattern, text, re.IGNORECASE)]
     
     def _extract_ages(self, text: str) -> List[str]:
-        """Extract age patterns"""
+        """Extract age patterns."""
         patterns = [
             r'\d+\s+years?\s+old',
             r'\d+\s+years?(?!\s+old)',
@@ -92,16 +84,15 @@ class NERExtractor:
         return matches
     
     def _extract_routes(self, text: str) -> List[str]:
-        """Extract administration routes (oral, IV, topical)."""
+        """Extract administration routes."""
         pattern = r'\b(oral|orally|intravenous|intravenously|iv|topical|topically|' \
                   r'subcutaneous|intramuscular|im|sublingual|rectal|nasal|inhaled|' \
                   r'transdermal|ophthalmic|otic|vaginal|buccal)\b'
         return [m.group(0) for m in re.finditer(pattern, text, re.IGNORECASE)]
     
     def _extract_forms(self, text: str) -> List[str]:
-        """Extract medication forms (tablet, capsule, syrup)."""
+        """Extract medication forms."""
         pattern = r'\b(tablet|tablets|tab|capsule|capsules|cap|syrup|solution|' \
                   r'suspension|injection|injectable|cream|ointment|gel|patch|' \
                   r'powder|granules|drops|spray|inhaler|suppository|lozenge)\b'
         return [m.group(0) for m in re.finditer(pattern, text, re.IGNORECASE)]
-    

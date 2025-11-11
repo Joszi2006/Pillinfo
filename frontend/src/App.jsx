@@ -115,7 +115,7 @@ function App() {
           {!isSidebarOpen && (
       <button
         onClick={() => setIsSidebarOpen(true)}
-        className="md:hidden absolute left-4 bottom-24 z-90 w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+        className="md:hidden absolute left-4 bottom-24 z-90 w-14 h-14 bg-linear-to-br from-blue-500 to-blue-600 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
       >
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -124,7 +124,7 @@ function App() {
     )}
 
 
-      {/* Desktop: Header spans full width above everything */}
+      {/* Desktop view : Header spans full width above everything */}
       <div className="hidden md:block fixed top-[60px] left-1/2 -translate-x-1/2 w-[calc(100%-120px)] max-w-[1030px] z-50">
         <Header />
       </div>
@@ -181,22 +181,6 @@ function App() {
                   return null;
               }
             })}
-
-            {isLoading && (
-              <div className="flex items-center gap-3 mb-5">
-                {/* Static blue circle (no animation) */}
-                <div className="w-11 h-11 rounded-full bg-linear-to-br from-blue-400 via-blue-500 to-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.25)] flex items-center justify-center">
-                  <div className="w-3 h-3 bg-white rounded-full" />
-                </div>
-                
-                {/* Three bouncing dots */}
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            )}
           </ChatContainer>
 
           {/* Input Area */}
