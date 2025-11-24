@@ -1,230 +1,98 @@
 """
-API Routes - Orchestrates the correct flow (FIXED VERSION)
+API Routes - Drug lookup endpoints
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, List
-from functools import lru_cache
+from typing import Optional, List, Dict
 from backend.services.text_processor import TextProcessor
 from backend.services.drug_lookup.drug_lookup_service import DrugLookupService
 from backend.services.dosage.dosage_service import DosageService
 from backend.services.ocr_service import OCRService
-from backend.services.cache_service import CacheService
-from backend.utilities.message_generator import MessageGenerator
-import asyncio
 
 router = APIRouter()
 
-# ==================== DEPENDENCY INJECTION (SINGLETON) ====================
 
-@lru_cache()
-def get_text_processor():
-    """Singleton: Creates processor once and reuses it."""
-    return TextProcessor()
-
-@lru_cache()
-def get_drug_lookup_service():
-    """Singleton: Reuses the same instance."""
-    return DrugLookupService()
-
-@lru_cache()
-def get_dosage_service():
-    """Singleton: Reuses the same instance."""
-    return DosageService()
-
-@lru_cache()
-def get_ocr_service():
-    """Singleton: Reuses the same instance."""
-    return OCRService()
-
-@lru_cache()
-def get_cache_service():
-    """Singleton: Reuses the same instance."""
-    return CacheService()
-
-@lru_cache()
-def get_message_generator():
-    """Singleton: Message generator."""
-    return MessageGenerator()
-
-
-# ==================== REQUEST MODELS WITH VALIDATION ====================
+# ==================== REQUEST MODELS ====================
 
 class TextLookupRequest(BaseModel):
-    text: str = Field(..., description="User input text", min_length=1, max_length=1000)
+    text: str = Field(..., min_length=1, max_length=1000)
     use_ner: bool = True
-    lookup_all_drugs : bool = False
-    
+
 
 # ==================== SHARED LOGIC ====================
 
-async def _process_drug_lookup(
+async def _process_lookup(
     processed: Dict,
     drug_lookup: DrugLookupService,
-    dosage_service: DosageService,
-    msg_gen : MessageGenerator,
-    user_weight: Optional[float] = None,
-    user_age: Optional[int] = None,
+    dosage_service: DosageService
 ) -> Dict:
-    """
-    Shared drug lookup logic for both text and image streams.
+    """Shared drug lookup logic."""
+    if "error" in processed:
+        return {"success": False, "error": processed["error"]}
     
-    """
-    if not processed.get("brand_name"):
-        return {
-            "success": False,
-            "error": processed["error"]
-        }
-    
-    # Use extracted weight/age OR fallback to request params
-    patient_weight = processed.get("weight_kg") or user_weight
-    patient_age = processed.get("age_years") or user_age
-    dosage_mg = processed.get("dosage_numeric")
-    
-    user_was_specific = bool(
-        processed.get("dosage") or 
-        processed.get("route") or 
-        processed.get("form")
-    )
-    
-    # Look up drug products
-    products, source, generic_name = await drug_lookup.lookup_drug(processed["brand_name"])
-    
-    if not products:
-        return {
-            "success": False,
-            "brand_name": processed["brand_name"],
-            "products": [],
-            "source": source,
-            "processed": processed
-        }
-    
-    # Refine products based on extracted info
-    refined = drug_lookup.refine_products(
-        products,
+    # Lookup drug
+    result = await drug_lookup.lookup_drug(
+        brand_name=processed["brand_name"],
         dosage=processed.get("dosage"),
         route=processed.get("route"),
         form=processed.get("form")
     )
-
     
-    match_result = drug_lookup.evaluate_product_matches(
-    products=products,
-    refined=refined,
-    user_was_specific= user_was_specific
-    )   
-    
-    
-
-    # Generate message based on match_type
-    user_message = msg_gen.match_guidance_message(
-        match_type=match_result["match_type"],
-        match_count=match_result["match_count"]
-    )
-    
-    cleaned_dosage_info = None
-    if match_result["match_type"] == "exact":
-        dosage_info = await dosage_service.get_dosage_info(
-            drug_name=processed["brand_name"],  
-            generic_name=generic_name,
-            adult_dose_mg= dosage_mg,
-            patient_weight_kg= patient_weight,
-            patient_age= patient_age
+    # If exact match, get dosage info
+    if result["status"] == "exact_match":
+        dose_info = await dosage_service.get_dose(
+            rxcui=result["product"]["rxcui"],
+            weight_lb=processed.get("weight_lb"),
+            age_months=processed.get("age_months")
         )
-        cleaned_dosage_info = msg_gen.clean_dosage_info(dosage_info)
-    
         
+        return {
+            "success": True,
+            "status": "exact_match",
+            "brand_name": processed["brand_name"],
+            "product": result["product"],
+            "dose_info": dose_info
+        }
+    
+    # Multiple matches or not found
     return {
-        "success": True,
+        "success": result["status"] != "not_found",
+        "status": result["status"],
         "brand_name": processed["brand_name"],
-        "best_match": match_result["best_match"],
-        "matched_products": match_result["sample_products"],
-        "message": user_message,
-        "dosage_info": cleaned_dosage_info
+        "products": result["products"]
     }
+
 
 # ==================== ENDPOINTS ====================
 
 @router.post("/lookup/text")
-async def lookup_from_text(
-    request: TextLookupRequest,
-    text_processor: TextProcessor = Depends(get_text_processor),
-    drug_lookup: DrugLookupService = Depends(get_drug_lookup_service),
-    dosage_service: DosageService = Depends(get_dosage_service),
-    msg_gen: MessageGenerator = Depends(get_message_generator)
-):
-    """
-    Text-based drug lookup
-    """
+async def lookup_from_text(request: TextLookupRequest):
+    """Text-based drug lookup."""
     try:
-        # Process text (extracts everything)
+        text_processor = TextProcessor()
+        drug_lookup = DrugLookupService()
+        dosage_service = DosageService()
+        
         processed = text_processor.process_text(request.text, request.use_ner)
-        all_drugs = processed.get("all_drugs", [])
-        
-        # Check if multiple drugs detected
-        if len(all_drugs) > 1 and request.lookup_all_drugs:
-            # User wants ALL drugs - lookup in parallel
-            tasks = [drug_lookup.lookup_drug(drug) for drug in all_drugs]
-            results = await asyncio.gather(*tasks)
-            
-            return {
-                "success": True,
-                "multiple_drugs": True,
-                "count": len(all_drugs),
-                "results": [
-                    {
-                        "drug": all_drugs[i],
-                        "products": results[i][0],
-                        "source": results[i][1],
-                        "generic_name": results[i][2]
-                    }
-                    for i in range(len(all_drugs))
-                ]
-            }
-        
-        # Step 3: Default behavior - lookup first drug only
-        result = await _process_drug_lookup(
-            processed,
-            drug_lookup,
-            dosage_service,
-            msg_gen
-        )
-        
-        # Step 4: Add warning if multiple drugs detected
-        if len(all_drugs) > 1:
-            result["multiple_drugs_warning"] = {
-                "message": f"Multiple drugs detected. Showing results for: {processed['brand_name']}",
-                "all_detected": all_drugs,
-                "other_drugs": all_drugs[1:]
-            }
-        
-        return result
-        
+        return await _process_lookup(processed, drug_lookup, dosage_service)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
-    
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/lookup/image")
 async def lookup_from_image(
     files: List[UploadFile] = File(...),
-    additional_text: Optional[str] = Form(None),
-    ocr_service: OCRService = Depends(get_ocr_service),
-    text_processor: TextProcessor = Depends(get_text_processor),
-    drug_lookup: DrugLookupService = Depends(get_drug_lookup_service),
-    dosage_service: DosageService = Depends(get_dosage_service),
-    msg_gen: MessageGenerator = Depends(get_message_generator)
-): 
-    """
-    Image-based drug lookup with optional user text for weight/age
-    """
+    additional_text: Optional[str] = Form(None)
+):
+    """Image-based drug lookup with OCR."""
     
-    # Validate files
+    # Validate
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
     
     if len(files) > 5:
         raise HTTPException(status_code=400, detail="Maximum 5 images allowed")
     
-    # Validate all files are images
     for file in files:
         if not file.content_type.startswith("image/"):
             raise HTTPException(
@@ -233,76 +101,44 @@ async def lookup_from_image(
             )
     
     try:
-        #Read all images
-        images_bytes = []
-        for file in files:
-            image_bytes = await file.read()
-            images_bytes.append(image_bytes)
+        ocr_service = OCRService()
+        text_processor = TextProcessor()
+        drug_lookup = DrugLookupService()
+        dosage_service = DosageService()
         
-        # print(f"Processing {len(images_bytes)} images...")
-        
-        # Step 2: OCR - Extract text from images
+        # Read and process images
+        images_bytes = [await file.read() for file in files]
         ocr_result = ocr_service.process_images(images_bytes)
-        
-        # print(f"OCR Result: {ocr_result['success']}")
-        # print(f"OCR Text: {ocr_result.get('corrected_text', 'NO TEXT')}")
         
         if not ocr_result["success"]:
             return {
                 "success": False,
-                "error": "OCR failed",
-                "ocr_result": ocr_result
+                "error": ocr_result.get("error", "OCR failed")
             }
         
-        # Step 3: Combine OCR text + user's additional text
-        combined_text = ocr_result["corrected_text"]
+        # Combine OCR + user text
+        combined_text = ocr_result["text"]
         if additional_text:
             combined_text += " " + additional_text
-            # print(f"Added user text: {additional_text}")
         
-        # print(f"Processing combined text: {combined_text}")
-        
-        #NER extraction (extracts drug + weight + age from combined text)
+        # Process and lookup
         processed = text_processor.process_text(combined_text, use_ner=True)
-        
-        # print(f"Extracted - Drug: {processed.get('brand_name')}, Weight: {processed.get('weight_kg')}, Age: {processed.get('age_years')}")
-        
-        # Drug lookup with extracted patient info
-        result = await _process_drug_lookup(
-            processed,
-            drug_lookup,
-            dosage_service,
-            msg_gen
-        )
+        result = await _process_lookup(processed, drug_lookup, dosage_service)
         
         # Add metadata
         result["images_processed"] = len(files)
-        result["ocr_result"] = ocr_result
         if additional_text:
             result["user_provided_text"] = additional_text
         
         return result
-    
+        
     except Exception as e:
-        print(f"ERROR: {type(e).__name__}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/health")
-async def health_check(
-    cache_service: CacheService = Depends(get_cache_service)
-):
-    """Health check endpoint."""
-    stats = cache_service.get_stats()
-    return {
-        "status": "healthy",
-        "cache_stats": stats
-    }
-
-
-@router.post("/cache/clear")
-async def clear_cache(
-    cache_service: CacheService = Depends(get_cache_service)
-):
-    """Clear all cached data."""
-    cache_service.clear()
-    return {"success": True, "message": "Cache cleared"}
+@router.post("/admin/clear-database")
+async def clear_database():
+    """Clear all cached drug data."""
+    from backend.api.dependencies import get_drug_database
+    db = get_drug_database()
+    db.clear()
+    return {"success": True, "message": "Database cleared"}

@@ -13,8 +13,8 @@ app = FastAPI(
     title="Pillinfo API",
     description="Drug Information Chatbot - AI-powered medication identification and information system",
     version="1.0.0",
-    docs_url="/docs",  # Swagger UI at http://localhost:8000/docs
-    redoc_url="/redoc"  # ReDoc at http://localhost:8000/redoc
+    docs_url="/docs",  # Swagger UI at http://localhost:8001/docs
+    redoc_url="/redoc"  # ReDoc at http://localhost:8001/redoc
 )
 
 # ==================== CORS MIDDLEWARE ====================
@@ -54,10 +54,7 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "text_lookup": "POST /lookup/text",
-            "image_lookup": "POST /lookup/image",
-            "manual_lookup": "POST /lookup/manual",
-            "health_check": "GET /health",
-            "seed_cache": "POST /cache/seed"
+            "image_lookup": "POST /lookup/image"
         }
     }
 
