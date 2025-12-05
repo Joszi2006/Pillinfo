@@ -10,7 +10,7 @@ export default {
         slideIn: 'slideIn 0.3s ease-out',
         slideInRight: 'slideInRight 0.3s ease-out',
         fadeIn: 'fadeIn 0.3s ease-out',
-        borderDraw: 'borderDraw 1.5s ease-out',
+        borderDraw: 'borderDraw 1.2s ease-out forwards',
       },
       keyframes: {
         slideIn: {
@@ -27,19 +27,10 @@ export default {
         },
         borderDraw: {
           '0%': { 
-            clipPath: 'inset(0 100% 100% 0)' 
-          },
-          '25%': { 
-            clipPath: 'inset(0 0 100% 0)' 
-          },
-          '50%': { 
-            clipPath: 'inset(0 0 0 0)' 
-          },
-          '75%': { 
-            clipPath: 'inset(0 0 0 100%)' 
+            strokeDashoffset: '400',
           },
           '100%': { 
-            clipPath: 'inset(0 0 0 0)' 
+            strokeDashoffset: '0',
           },
         },
       },

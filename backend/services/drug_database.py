@@ -186,3 +186,4 @@ class DrugDatabase:
     def close(self):
         """Close database connection."""
         self.conn.close()
+

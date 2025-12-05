@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const useDrugLookup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +17,7 @@ export const useDrugLookup = () => {
       const response = await fetch(`${API_BASE_URL}/lookup/text`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: JSON.stringify({
           text,
@@ -33,7 +33,7 @@ export const useDrugLookup = () => {
       const data = await response.json();
       return data;
     } catch (err) {
-      const errorMessage = err.message || 'Failed to lookup drug information';
+      const errorMessage = err.message;
       setError(errorMessage);
       return {
         success: false,

@@ -11,7 +11,7 @@ const WelcomeMessage = ({ onQuickAction }) => {
         <div className="max-w-[90%] md:max-w-[85%]">
           <div className="bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200/50 rounded-[18px_18px_18px_4px] md:rounded-[20px_20px_20px_4px] p-4 md:p-5 shadow-[0_4px_16px_rgba(37,99,235,0.08)]">
             <h3 className="text-base md:text-[17px] font-semibold text-slate-900 mb-1 md:mb-2">
-              Hi! I'm your Drug Information Assistant.
+              👋 Hi! I'm your Drug Information Assistant.
             </h3>
             <p className="text-sm md:text-[15px] text-slate-600 leading-relaxed">
               Ask me about any medication or upload a pill image to identify it!

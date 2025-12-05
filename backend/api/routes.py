@@ -38,20 +38,22 @@ async def _process_lookup(
         form=processed.get("form")
     )
     
+    
     # If exact match, get dosage info
-    if result["status"] == "exact_match":
+    if result["status"] == "best_match":   
         dose_info = await dosage_service.get_dose(
             rxcui=result["product"]["rxcui"],
             weight_lb=processed.get("weight_lb"),
-            age_months=processed.get("age_months")
+            age_months=processed.get("age_months"),
+            dosage_numeric=processed.get("dosage_numeric")
         )
         
         return {
             "success": True,
-            "status": "exact_match",
+            "status": "best_match",
             "brand_name": processed["brand_name"],
-            "product": result["product"],
-            "dose_info": dose_info
+            "best_match": result["product"],      
+            "dosage_info": dose_info           
         }
     
     # Multiple matches or not found
@@ -59,8 +61,9 @@ async def _process_lookup(
         "success": result["status"] != "not_found",
         "status": result["status"],
         "brand_name": processed["brand_name"],
-        "products": result["products"]
+        "matched_products": result["products"]
     }
+
 
 
 # ==================== ENDPOINTS ====================
@@ -76,6 +79,8 @@ async def lookup_from_text(request: TextLookupRequest):
         processed = text_processor.process_text(request.text, request.use_ner)
         return await _process_lookup(processed, drug_lookup, dosage_service)
     except Exception as e:
+        # import traceback
+        # traceback.print_exc()  # ADD THIS - prints full stack trace
         raise HTTPException(status_code=500, detail=str(e))
 
 

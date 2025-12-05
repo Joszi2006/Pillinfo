@@ -18,11 +18,9 @@ class DataParser:
     def __init__(self):
         self.client = get_claude_client()
     
+ 
     def parse_fda_label(self, raw_label: Dict) -> Dict:
-        """
-        Clean and structure raw FDA label data.
-        Returns structured data with dosing_chart as list of dicts.
-        """
+        """Clean and structure raw FDA label data."""
         if not raw_label:
             return self._empty_response()
         
@@ -35,11 +33,26 @@ class DataParser:
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            cleaned = json.loads(response.content[0].text)
+            response_text = response.content[0].text
+            
+            # Strip markdown code blocks if present
+            response_text = response_text.strip()
+            if response_text.startswith("```json"):
+                response_text = response_text[7:]  # Remove ```json
+            elif response_text.startswith("```"):
+                response_text = response_text[3:]  # Remove ```
+            
+            if response_text.endswith("```"):
+                response_text = response_text[:-3]  # Remove trailing ```
+            
+            response_text = response_text.strip()
+            
+            cleaned = json.loads(response_text)
             return self._validate(cleaned)
             
         except json.JSONDecodeError as e:
             logger.error(f"JSON parse failed: {e}")
+            logger.error(f"Response was: {response_text[:500]}")
             return self._empty_response()
         except Exception as e:
             logger.error(f"FDA parsing failed: {e}")

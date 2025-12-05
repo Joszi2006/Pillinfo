@@ -1,13 +1,12 @@
 """
 NER Extractor - Medical entity extraction using GLiNER
 """
-
 from typing import Dict, List
 from gliner import GLiNER
 import re
 import os
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class NERExtractor:
     """Extract medical entities using GLiNER with regex fallbacks."""
@@ -16,7 +15,7 @@ class NERExtractor:
         self.model_name = model_name
         self.model = None
         self._lazy_load()
-        
+    
     def _lazy_load(self):
         """Load GLiNER model on first use."""
         if self.model is None:
@@ -24,10 +23,18 @@ class NERExtractor:
     
     def extract(self, text: str) -> Dict[str, List[str]]:
         """Extract medical entities from text."""
-        labels = ["medication", "dosage", "route", "form"]
+        labels = [
+            "drug name",
+            "active ingredient",
+            "dosage",
+            "route of administration",
+            "dosage form"
+        ]
+        
         entities = self.model.predict_entities(text, labels, threshold=0.4)
         
         drugs = []
+        active_ingredients = []
         dosages = []
         routes = []
         forms = []
@@ -36,18 +43,22 @@ class NERExtractor:
             label = ent["label"].lower()
             text_val = ent["text"].strip()
             
-            if label == "medication":
-                drugs.extend(text_val.split())
+            if label == "drug name":
+                # Strip pediatric prefixes to get base brand
+                cleaned_drug = self._extract_base_brand(text_val)
+                drugs.append(cleaned_drug)
+            elif label == "active ingredient":
+                active_ingredients.append(text_val)
             elif label == "dosage":
                 dosages.append(text_val)
-            elif label == "route":
+            elif label == "route of administration":
                 routes.append(text_val)
-            elif label == "form":
+            elif label == "dosage form":
                 forms.append(text_val)
-
         
         return {
             "drugs": list(dict.fromkeys(drugs)),
+            "active_ingredients": list(dict.fromkeys(active_ingredients)),
             "dosages": list(dict.fromkeys(dosages)),
             "routes": list(dict.fromkeys(routes)),
             "forms": list(dict.fromkeys(forms)),
@@ -55,6 +66,23 @@ class NERExtractor:
             "ages": self._extract_ages(text)
         }
     
+    def _extract_base_brand(self, drug_name: str) -> str:
+        """Extract base brand name by removing pediatric prefixes."""
+        prefixes = [
+            "Childrens", "Children's", "childrens", "children's",
+            "Infant", "Infants", "infant", "infants",
+            "Junior", "junior",
+            "Pediatric", "pediatric",
+            "Baby", "baby"
+        ]
+        
+        for prefix in prefixes:
+            if drug_name.startswith(prefix):
+                # Remove prefix and any following space
+                base = drug_name[len(prefix):].strip()
+                return base
+        
+        return drug_name
     
     def _extract_weights(self, text: str) -> List[str]:
         """Extract weight patterns."""
@@ -66,13 +94,13 @@ class NERExtractor:
         patterns = [
             r'\d+(?:\.\d+)?\s*(?:years?|yrs?)(?:\s*old)?',
             r'\d+(?:\.\d+)?\s*(?:months?|mos?)(?:\s*old)?',
-            r'(?:age[:\s]+)(\d+(?:\.\d+)?)',  # Changed: capture group for just the number
+            r'(?:age[:\s]+)(\d+(?:\.\d+)?)',
             r'\d+(?:\.\d+)?\s*(?:year|yr|month|mo)\s+old'
         ]
+        
         matches = []
         for pattern in patterns:
             for match in re.finditer(pattern, text, re.IGNORECASE):
-                # If there's a group (like in age pattern), use group 1, otherwise group 0
                 extracted = match.group(1) if match.lastindex else match.group(0)
                 matches.append(extracted)
         
@@ -86,4 +114,3 @@ class NERExtractor:
                 unique.append(match)
         
         return unique
-        

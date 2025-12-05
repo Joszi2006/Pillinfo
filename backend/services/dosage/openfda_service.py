@@ -6,6 +6,7 @@ import asyncio
 import os
 from dotenv import load_dotenv
 from typing import Dict, Optional
+import asyncio
 
 load_dotenv()
 
@@ -74,5 +75,4 @@ class OpenFDAService:
             "contraindications": label.get("contraindications"),
             "adverse_reactions": label.get("adverse_reactions")
         }
-
-
+    

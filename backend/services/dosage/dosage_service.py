@@ -26,27 +26,31 @@ class DosageService:
         self, 
         rxcui: str, 
         weight_lb: Optional[float] = None,
-        age_months: Optional[int] = None
+        age_months: Optional[int] = None,
+        dosage_numeric: Optional[float] = None
     ) -> Dict:
         """Get dose recommendation for patient."""
         product = await self._get_product(rxcui)
         chart = self.database.get_dosing_chart(rxcui)
         
+        # No chart available
         if not chart:
             return self._build_response(None, product)
         
+        # Try to find dose from chart
         dose_result = self._find_dose_from_chart(
-            product, chart, weight_lb, age_months
+            product, chart, weight_lb, age_months, dosage_numeric
         )
         
-        if dose_result:
-            return self._build_response(
-                dose_result["dose"],
-                product,
-                dose_result.get("warning")
-            )
+        # If no match found (outside chart range), recommend doctor consultation
+        if not dose_result:
+            dose_result = {
+                "dose_ml": None,
+                "dose_text": "consult a healthcare provider",
+                "warning": "Patient parameters outside recommended dosing chart range."
+            }
         
-        return self._build_response("ask a doctor", product)
+        return self._build_response(dose_result, product)
     
     # ==================== DATA FETCHING ====================
     
@@ -61,14 +65,10 @@ class DosageService:
         return product
     
     async def _fetch_and_save(self, rxcui: str):
-        """Fetch from OpenFDA and save to database."""
         try:
-            logger.info(f"Fetching FDA data for rxcui: {rxcui}")
             raw_fda = await self.openfda.get_drug_info(rxcui)
-            
             if raw_fda:
-                logger.debug(f"Successfully fetched FDA data for {rxcui}")
-                cleaned = self.parser.parse_fda_label(raw_fda)
+                cleaned = self.parser.parse_fda_label(raw_fda)    
                 self.database.save_fda_info(rxcui, cleaned)
             else:
                 logger.warning(f"No FDA data found for rxcui: {rxcui}")
@@ -82,7 +82,8 @@ class DosageService:
         product: Dict,
         chart: List[Dict], 
         weight_lb: Optional[float],
-        age_months: Optional[int]
+        age_months: Optional[int],
+        dosage_numeric: Optional[float]
     ) -> Optional[Dict]:
         """Find matching dose from chart."""
         weight_match = None
@@ -105,44 +106,45 @@ class DosageService:
         
         # Perfect match
         if weight_match and age_match and weight_match == age_match:
-            dose = self._format_dose(weight_match)
-            return {"dose": dose, "warning": None}
+            dose_info = self._format_dose(weight_match)
+            return {**dose_info, "warning": None}
         
         # Mismatched - calculate exact dose
         if weight_match and age_match and weight_match != age_match:
-            calculated = self._calculate_exact_dose(product, chart, weight_lb)
+            calculated = self._calculate_exact_dose(product, chart, weight_lb, dosage_numeric)
             if calculated:
                 return {
-                    "dose": calculated,
+                    "dose_ml": calculated,
+                    "dose_text": None,
                     "warning": "Weight exceeds typical range for age. Dose calculated. Consult healthcare provider."
                 }
         
         # Only weight
         if weight_match:
-            dose = self._format_dose(weight_match)
-            return {"dose": dose, "warning": None}
+            dose_info = self._format_dose(weight_match)
+            return {**dose_info, "warning": None}
         
         # Only age
         if age_match:
-            dose = self._format_dose(age_match)
+            dose_info = self._format_dose(age_match)
             return {
-                "dose": dose,
+                **dose_info, 
                 "warning": "Age-based dosing less accurate than weight-based."
             }
         
+        # No match found - return None (handled in get_dose)
         return None
     
     def _calculate_exact_dose(
         self,
         product: Dict,
         chart: List[Dict],
-        weight_lb: float
+        weight_lb: float,
+        dosage_numeric: Optional[float] = None
     ) -> Optional[str]:
         """Calculate exact dose using mg/kg from chart."""
         try:
-            concentration = self.parser.extract_concentration(
-                product.get("product_name", "")
-            )
+            concentration = dosage_numeric
             if not concentration:
                 return None
             
@@ -170,28 +172,43 @@ class DosageService:
             return value >= min_val
         return min_val <= value <= max_val
     
-    def _format_dose(self, row: Dict) -> str:
-        """Format dose from chart row."""
-        if row.get("dose_ml"):
-            return f"{row['dose_ml']} mL"
-        return row.get("dose_text", "ask a doctor")
+    def _format_dose(self, row: Dict) -> Dict:
+        """Extract dose information from chart row."""
+        dose_ml = row.get("dose_ml")
+        dose_text = row.get("dose_text")
+        
+        # Format dose_ml if it exists
+        if dose_ml is not None:
+            return {
+                "dose_ml": f"{dose_ml} mL",
+                "dose_text": None
+            }
+        
+        # Otherwise return text instruction
+        return {
+            "dose_ml": None,
+            "dose_text": dose_text or "ask a doctor"
+        }
     
     # ==================== RESPONSE BUILDING ====================
     
     def _build_response(
         self,
-        dose: Optional[str],
-        product: Dict,
-        warning: Optional[str] = None
+        dose_result: Optional[Dict],
+        product: Dict
     ) -> Dict:
         """Build user-facing response."""
         response = {
-            "dose": dose,
+            "purpose": product.get("purpose", ""),
+            "dose_ml": dose_result.get("dose_ml") if dose_result else None,
+            "dose_text": dose_result.get("dose_text") if dose_result else None,
             "instructions": product.get("dosage_instructions", ""),
             "warnings": product.get("warnings", ""),
             "contraindications": product.get("contraindications", ""),
             "adverse_reactions": product.get("adverse_reactions", "")
         }
-        if warning:
-            response["warning"] = warning
+        
+        if dose_result and dose_result.get("warning"):
+            response["warning"] = dose_result["warning"]
+        
         return response
