@@ -20,17 +20,17 @@ class NERExtractor:
         self._lazy_load()
     
     def _lazy_load(self):
-        """Load GLiNER model on first use with quantization."""
+        """Load GLiNER model on first use with CPU-compatible quantization."""
         if self.model is None:
-            try:
-                self.model = GLiNER.from_pretrained(
-                    self.model_name,
-                    load_in_8bit=True,
-                    device_map="auto"
-                )
-            except Exception as e:
-                self.model = GLiNER.from_pretrained(self.model_name)
-                self.model.to("cpu")
+            self.model = GLiNER.from_pretrained(self.model_name)
+            self.model.to("cpu")
+            
+            # Apply dynamic quantization for CPU
+            self.model = torch.quantization.quantize_dynamic(
+                self.model,
+                {torch.nn.Linear},
+                dtype=torch.qint8
+            )
     
     def extract(self, text: str) -> Dict[str, List[str]]:
         """Extract medical entities from text."""
