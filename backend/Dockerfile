@@ -5,8 +5,17 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the model during build
-RUN python -c "from gliner import GLiNER; import os; os.environ['TOKENIZERS_PARALLELISM']='false'; GLiNER.from_pretrained('anthonyyazdaniml/gliner-biomed-large-v1.0-medication-regimen-ner')"
+# --- RUN COMMAND WITH QUANTIZATION ---
+RUN python -c " \
+    from gliner import GLiNER; \
+    from transformers import BitsAndBytesConfig; \
+    import torch; \
+    import os; \
+    os.environ['TOKENIZERS_PARALLELISM']='false'; \
+    quant_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float32); \
+    GLiNER.from_pretrained('anthonyyazdaniml/gliner-biomed-large-v1.0-medication-regimen-ner', quantization_config=quant_config) \
+"
+# ---------------------------------------------
 
 COPY . .
 

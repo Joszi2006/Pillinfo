@@ -1,5 +1,5 @@
 """
-NER Extractor - Medical entity extraction using GLiNER with quantization
+NER Extractor - Medical entity extraction
 """
 from typing import Dict, List
 from gliner import GLiNER
@@ -7,31 +7,36 @@ import re
 import os
 from dotenv import load_dotenv
 import torch
+from transformers import BitsAndBytesConfig
+
 
 load_dotenv()
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class NERExtractor:
-    """Extract medical entities using GLiNER with regex fallbacks."""
-    
+    """Extract medical entities using GLiNER with regex fallbacks."""    
     def __init__(self):
         self.model_name = os.getenv("NER_MODEL_NAME")
         self.model = None
         self._lazy_load()
     
     def _lazy_load(self):
-        """Load GLiNER model on first use with CPU-compatible quantization."""
+        """
+        Load GLiNER model on first use with 4-bit Quantization 
+        """
         if self.model is None:
-            self.model = GLiNER.from_pretrained(self.model_name)
-            self.model.to("cpu")
-            
-            # Apply dynamic quantization for CPU
-            self.model = torch.quantization.quantize_dynamic(
-                self.model,
-                {torch.nn.Linear},
-                dtype=torch.qint8
+            # Define the 4-bit Quantization Configuration
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float32
             )
-    
+            
+            self.model = GLiNER.from_pretrained(
+                self.model_name, 
+                quantization_config=quantization_config
+            )
+
+        
     def extract(self, text: str) -> Dict[str, List[str]]:
         """Extract medical entities from text."""
         labels = [
@@ -77,6 +82,7 @@ class NERExtractor:
         }
     
     def _extract_base_brand(self, drug_name: str) -> str:
+        # ... (utility functions remain unchanged) ...
         """Extract base brand name by removing pediatric prefixes."""
         prefixes = [
             "Childrens", "Children's", "childrens", "children's",

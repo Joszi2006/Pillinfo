@@ -23,7 +23,6 @@ async def lifespan(app: FastAPI):
     
     yield
 
-# Create FastAPI app
 app = FastAPI(
     title="Pillinfo API",
     description="Drug Information Chatbot - AI-powered medication identification and information system",
