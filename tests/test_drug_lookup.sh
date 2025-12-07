@@ -31,7 +31,8 @@ trap cleanup EXIT
 
 # Give the server time to start
 sleep 10
-
+echo "Clearing Database"
+curl -X POST http://localhost:$SERVER_PORT/admin/clear-database
 
 # Send the test request
 echo "Sending request to /lookup/text..."

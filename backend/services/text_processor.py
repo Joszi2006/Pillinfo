@@ -2,7 +2,7 @@
 Text Processor - Extract and normalize drug information
 """
 from typing import Dict, Optional
-from backend.api.dependencies import get_ner_extractor
+from api.dependencies import get_ner_extractor
 import re
 
 

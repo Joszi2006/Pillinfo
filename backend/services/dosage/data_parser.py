@@ -4,8 +4,8 @@ Data Parser - Clean raw FDA data using Claude
 import json
 import logging
 from typing import Dict
-from backend.api.dependencies import get_claude_client
-from backend.utilities.prompt_builder import PromptBuilder
+from api.dependencies import get_claude_client
+from utilities.prompt_builder import PromptBuilder
 
 logger = logging.getLogger(__name__)
 

@@ -5,14 +5,16 @@ from typing import Dict, List
 from gliner import GLiNER
 import re
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class NERExtractor:
     """Extract medical entities using GLiNER with regex fallbacks."""
     
-    def __init__(self, model_name: str = "anthonyyazdaniml/gliner-biomed-large-v1.0-medication-regimen-ner"):
-        self.model_name = model_name
+    def __init__(self):
+        self.model_name = os.getenv("NER_MODEL_NAME")
         self.model = None
         self._lazy_load()
     

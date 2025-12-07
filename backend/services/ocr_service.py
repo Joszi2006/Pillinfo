@@ -2,9 +2,9 @@
 OCR Service - Extract text from medication images
 """
 from typing import Dict, List
-from backend.api.dependencies import get_claude_client
-from backend.services.image_processor import ImageProcessor
-from backend.utilities.prompt_builder import PromptBuilder
+from api.dependencies import get_claude_client
+from services.image_processor import ImageProcessor
+from utilities.prompt_builder import PromptBuilder
 
 
 class OCRService:

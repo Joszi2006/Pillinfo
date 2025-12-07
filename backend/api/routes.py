@@ -4,10 +4,10 @@ API Routes - Drug lookup endpoints
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
-from backend.services.text_processor import TextProcessor
-from backend.services.drug_lookup.drug_lookup_service import DrugLookupService
-from backend.services.dosage.dosage_service import DosageService
-from backend.services.ocr_service import OCRService
+from services.text_processor import TextProcessor
+from services.drug_lookup.drug_lookup_service import DrugLookupService
+from services.dosage.dosage_service import DosageService
+from services.ocr_service import OCRService
 
 router = APIRouter()
 
@@ -143,7 +143,7 @@ async def lookup_from_image(
 @router.post("/admin/clear-database")
 async def clear_database():
     """Clear all cached drug data."""
-    from backend.api.dependencies import get_drug_database
+    from api.dependencies import get_drug_database
     db = get_drug_database()
     db.clear()
     return {"success": True, "message": "Database cleared"}

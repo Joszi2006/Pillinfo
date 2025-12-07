@@ -6,12 +6,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ==================== LIFESPAN EVENTS ====================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    from backend.services.text_processor import TextProcessor
+    from services.text_processor import TextProcessor
     
     
     # Create text_processor instance and warm up
@@ -45,16 +49,14 @@ app = FastAPI(
 # ==================== CORS MIDDLEWARE ====================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173"
-    ],
+    allow_origins=[os.getenv("FRONTEND_URL")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ==================== INCLUDE ROUTERS ====================
-from backend.api.routes import router
+from api.routes import router
 app.include_router(router, tags=["Drug Lookup"])
 
 # ==================== ROOT ENDPOINT ====================
@@ -75,9 +77,9 @@ async def root():
 # ==================== RUN SERVER ====================
 if __name__ == "__main__":
     uvicorn.run(
-        "backend.main:app",
+        "main:app",
         host="0.0.0.0",
-        port=8001,
+        port=int(os.getenv("PORT")),
         reload=True,
         log_level="info"
     )

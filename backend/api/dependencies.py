@@ -4,8 +4,8 @@ Dependency Injection - Singleton Management
 from functools import lru_cache
 import os
 from anthropic import Anthropic
-from backend.ml.ner_extractor import NERExtractor
-from backend.services.drug_database import DrugDatabase
+from ml.ner_extractor import NERExtractor
+from services.drug_database import DrugDatabase
 
 
 # ==================== SINGLETONS ====================

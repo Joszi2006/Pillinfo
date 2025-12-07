@@ -2,8 +2,8 @@
 Drug Lookup Service - Coordinates drug lookup
 """
 from typing import List, Optional, Dict
-from backend.services.drug_lookup.rxnorm_service import RxNormService
-from backend.api.dependencies import get_drug_database
+from services.drug_lookup.rxnorm_service import RxNormService
+from api.dependencies import get_drug_database
 from rapidfuzz import fuzz
 
 
