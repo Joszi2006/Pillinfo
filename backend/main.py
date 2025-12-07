@@ -17,24 +17,11 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     from services.text_processor import TextProcessor
     
-    
     # Create text_processor instance and warm up
     text_processor = TextProcessor()
     text_processor.process_text("warmup", use_ner=True)
     
-    print("=" * 60)
-    print("PILLINFO API SERVER READY")
-    print("=" * 60)
-    print("API Documentation: http://localhost:8001/docs")
-    print("Health Check: http://localhost:8001/health")
-    print("=" * 60)
-    
     yield
-    
-    # Shutdown
-    print("\n" + "=" * 60)
-    print("PILLINFO API SERVER SHUTTING DOWN...")
-    print("=" * 60)
 
 # Create FastAPI app
 app = FastAPI(
