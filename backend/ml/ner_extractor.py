@@ -1,13 +1,14 @@
 """
-NER Extractor - Medical entity extraction using GLiNER
+NER Extractor - Medical entity extraction using GLiNER with quantization
 """
 from typing import Dict, List
 from gliner import GLiNER
 import re
 import os
 from dotenv import load_dotenv
-load_dotenv()
+import torch
 
+load_dotenv()
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class NERExtractor:
@@ -19,9 +20,17 @@ class NERExtractor:
         self._lazy_load()
     
     def _lazy_load(self):
-        """Load GLiNER model on first use."""
+        """Load GLiNER model on first use with quantization."""
         if self.model is None:
-            self.model = GLiNER.from_pretrained(self.model_name)
+            try:
+                self.model = GLiNER.from_pretrained(
+                    self.model_name,
+                    load_in_8bit=True,
+                    device_map="auto"
+                )
+            except Exception as e:
+                self.model = GLiNER.from_pretrained(self.model_name)
+                self.model.to("cpu")
     
     def extract(self, text: str) -> Dict[str, List[str]]:
         """Extract medical entities from text."""
@@ -46,7 +55,6 @@ class NERExtractor:
             text_val = ent["text"].strip()
             
             if label == "drug name":
-                # Strip pediatric prefixes to get base brand
                 cleaned_drug = self._extract_base_brand(text_val)
                 drugs.append(cleaned_drug)
             elif label == "active ingredient":
@@ -80,7 +88,6 @@ class NERExtractor:
         
         for prefix in prefixes:
             if drug_name.startswith(prefix):
-                # Remove prefix and any following space
                 base = drug_name[len(prefix):].strip()
                 return base
         
