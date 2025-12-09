@@ -1,42 +1,49 @@
 """
-NER Extractor - Medical entity extraction
+NER Extractor - Medical entity extraction using GLiNER
 """
 from typing import Dict, List
 from gliner import GLiNER
+from memory_profiler import profile
+import torch
+from transformers import BitsAndBytesConfig
 import re
 import os
 from dotenv import load_dotenv
-import torch
-from transformers import BitsAndBytesConfig
-
-
 load_dotenv()
+
+log_file = open('memory_profile.log', 'w')
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class NERExtractor:
-    """Extract medical entities using GLiNER with regex fallbacks."""    
+    """Extract medical entities using GLiNER with regex fallbacks."""
+    
     def __init__(self):
         self.model_name = os.getenv("NER_MODEL_NAME")
         self.model = None
         self._lazy_load()
     
+    @profile(stream=log_file)
     def _lazy_load(self):
-        """
-        Load GLiNER model on first use with 4-bit Quantization 
-        """
+        """Load GLiNER model on first use."""
         if self.model is None:
-            # Define the 4-bit Quantization Configuration
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.float32
-            )
-            
             self.model = GLiNER.from_pretrained(
                 self.model_name, 
-                quantization_config=quantization_config
+                device_map=torch.device('cpu') 
             )
 
-        
+            # --- 2. CRITICAL: Immediately Apply Dynamic Quantization (qint8) ---
+            print("Applying PyTorch Dynamic Quantization (qint8)...")
+            self.model = torch.quantization.quantize_dynamic(
+                self.model,
+                # Specify only the Linear layers for quantization
+                {torch.nn.Linear}, 
+                dtype=torch.qint8 
+            )
+
+            # --- 3. Set to Evaluation Mode and Warmup ---
+            self.model.eval()
+            
     def extract(self, text: str) -> Dict[str, List[str]]:
         """Extract medical entities from text."""
         labels = [
@@ -46,8 +53,8 @@ class NERExtractor:
             "route of administration",
             "dosage form"
         ]
-        
-        entities = self.model.predict_entities(text, labels, threshold=0.4)
+        with torch.no_grad():
+            entities = self.model.predict_entities(text, labels, threshold=0.4)
         
         drugs = []
         active_ingredients = []
@@ -60,6 +67,7 @@ class NERExtractor:
             text_val = ent["text"].strip()
             
             if label == "drug name":
+                # Strip pediatric prefixes to get base brand
                 cleaned_drug = self._extract_base_brand(text_val)
                 drugs.append(cleaned_drug)
             elif label == "active ingredient":
@@ -82,7 +90,6 @@ class NERExtractor:
         }
     
     def _extract_base_brand(self, drug_name: str) -> str:
-        # ... (utility functions remain unchanged) ...
         """Extract base brand name by removing pediatric prefixes."""
         prefixes = [
             "Childrens", "Children's", "childrens", "children's",
@@ -94,6 +101,7 @@ class NERExtractor:
         
         for prefix in prefixes:
             if drug_name.startswith(prefix):
+                # Remove prefix and any following space
                 base = drug_name[len(prefix):].strip()
                 return base
         
@@ -128,4 +136,4 @@ class NERExtractor:
                 seen.add(normalized)
                 unique.append(match)
         
-        return unique
+        return unique 
