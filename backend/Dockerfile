@@ -20,3 +20,4 @@ RUN python -c " \
 COPY . .
 
 CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+EXPOSE $PORT
