@@ -19,5 +19,5 @@ RUN python -c " \
 
 COPY . .
 
+COPY backend/ .
 CMD uvicorn main:app --host 0.0.0.0 --port $PORT
-EXPOSE $PORT
