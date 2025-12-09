@@ -2,23 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY backend/ .
-COPY requirements.txt .
+# Copy requirements first
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# --- RUN COMMAND WITH QUANTIZATION ---
-RUN python -c " \
-    from gliner import GLiNER; \
-    from transformers import BitsAndBytesConfig; \
-    import torch; \
-    import os; \
-    os.environ['TOKENIZERS_PARALLELISM']='false'; \
-    quant_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float32); \
-    GLiNER.from_pretrained('anthonyyazdaniml/gliner-biomed-large-v1.0-medication-regimen-ner', quantization_config=quant_config) \
-"
-# ---------------------------------------------
+# Pre-download the GLiNER model (no quantization here, we do it in code)
+RUN python -c "from gliner import GLiNER; import os; os.environ['TOKENIZERS_PARALLELISM']='false'; GLiNER.from_pretrained('anthonyyazdaniml/gliner-biomed-large-v1.0-medication-regimen-ner')"
 
-COPY . .
-
+# Copy all backend code
+COPY backend/ .
 
 CMD uvicorn main:app --host 0.0.0.0 --port $PORT
