@@ -4,19 +4,18 @@ NER Extractor - Medical entity extraction using GLiNER with quantization
 from typing import Dict, List
 from gliner import GLiNER
 import torch
-from torchao.quantization import quantize_, int8_weight_only
 import re
 import os
-from dotenv import load_dotenv
+from config import NER_MODEL_NAME
 
-load_dotenv()
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class NERExtractor:
     """Extract medical entities using GLiNER with regex fallbacks."""
     
     def __init__(self):
-        self.model_name = os.getenv("NER_MODEL_NAME")
+        self.model_name = NER_MODEL_NAME
         self.model = None
         self._lazy_load()
     
@@ -29,7 +28,11 @@ class NERExtractor:
             )
 
             # Apply int8 weight-only quantization
-            quantize_(self.model, int8_weight_only())
+            self.model = torch.quantization.quantize_dynamic(
+                self.model,
+                {torch.nn.Linear}, 
+                dtype=torch.qint8 
+            )
 
             self.model.eval()
             
