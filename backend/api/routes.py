@@ -148,7 +148,7 @@ async def clear_database():
     db.clear()
     return {"success": True, "message": "Database cleared"}
 
-@router.post("/health")
+@router.get("/health")
 async def health_check():
     """Check database connection and cache status."""
     try:
