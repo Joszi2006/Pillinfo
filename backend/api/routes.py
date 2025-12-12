@@ -5,7 +5,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from ml.text_processor import TextProcessor
-from services.drug_lookup.drug_lookup_service import DrugLookupService
+from services.drug_lookup_service import DrugLookupService
 from services.dosage_service import DosageService
 from services.ocr_service import OCRService
 
