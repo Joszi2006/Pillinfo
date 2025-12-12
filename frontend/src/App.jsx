@@ -54,17 +54,8 @@ function App() {
   };
 
   const addToRecentMatches = (response, messageId) => {
-  console.log('=== ADD TO RECENT MATCHES ===');
-  console.log('Full response:', JSON.stringify(response, null, 2));
-  console.log('response.success:', response.success);
-  console.log('response.status:', response.status);
-  console.log('response.best_match:', response.best_match);
-  console.log('============================');
-  
   if (response.success && response.status === 'best_match' && response.best_match) {
-    const drugName = response.best_match.name || response.best_match.product_name || 'Unknown Drug';
-    console.log('Adding drug to recent:', drugName);
-    
+    const drugName = response.best_match.name || response.best_match.product_name || 'Unknown Drug'; 
     const exists = recentMatches.some(match => match.drugName === drugName);
     
     if (!exists) {
@@ -78,8 +69,6 @@ function App() {
 
   const handleMatchClick = (match) => {
     setIsSidebarOpen(false);
-    
- 
     const messageElement = document.getElementById(`message-${match.messageId}`);
     
     if (messageElement) {

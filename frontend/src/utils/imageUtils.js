@@ -1,11 +1,23 @@
 /**
+ * Image utility functions for resizing and validation
+ */
+
+// Constants
+const MAX_IMAGES = 5;
+const MAX_WIDTH = 1600;
+const MAX_HEIGHT = 1600;
+const VALID_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const JPEG_QUALITY = 0.92;
+
+/**
  * Resize image to max dimensions while maintaining aspect ratio
  * @param {File} file - Image file to resize
  * @param {number} maxWidth - Maximum width (default 1600px)
  * @param {number} maxHeight - Maximum height (default 1600px)
  * @returns {Promise<Blob>} - Resized image blob
  */
-export const resizeImage = (file, maxWidth = 1600, maxHeight = 1600) => {
+export const resizeImage = (file, maxWidth = MAX_WIDTH, maxHeight = MAX_HEIGHT) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
@@ -33,7 +45,6 @@ export const resizeImage = (file, maxWidth = 1600, maxHeight = 1600) => {
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
-        
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
@@ -47,7 +58,7 @@ export const resizeImage = (file, maxWidth = 1600, maxHeight = 1600) => {
             }
           },
           'image/jpeg',
-          0.92 // Quality
+          JPEG_QUALITY
         );
       };
       
@@ -76,8 +87,48 @@ export const resizeMultipleImages = async (files) => {
  * @returns {boolean} - True if valid image
  */
 export const isValidImage = (file) => {
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  
-  return validTypes.includes(file.type) && file.size <= maxSize;
+  return VALID_TYPES.includes(file.type) && file.size <= MAX_SIZE;
 };
+
+/**
+ * Validate and limit number of images
+ * @param {FileList|File[]} files - Files to validate
+ * @returns {Object} - {valid: File[], errors: string[]}
+ */
+export const validateImages = (files) => {
+  const fileArray = Array.from(files);
+  const errors = [];
+  
+  // Check image count limit
+  if (fileArray.length > MAX_IMAGES) {
+    errors.push(`Maximum ${MAX_IMAGES} images allowed. Only the first ${MAX_IMAGES} will be processed.`);
+  }
+  
+  // Limit to max images
+  const limitedFiles = fileArray.slice(0, MAX_IMAGES);
+  
+  // Validate each file
+  const validFiles = limitedFiles.filter(file => {
+    if (!isValidImage(file)) {
+      errors.push(`${file.name}: Invalid file type or size (max 10MB)`);
+      return false;
+    }
+    return true;
+  });
+  
+  return {
+    valid: validFiles,
+    errors: errors
+  };
+};
+
+/**
+ * Get image validation constants (for UI display)
+ */
+export const getImageLimits = () => ({
+  maxImages: MAX_IMAGES,
+  maxSize: MAX_SIZE,
+  maxSizeMB: MAX_SIZE / (1024 * 1024),
+  validTypes: VALID_TYPES,
+  validExtensions: ['.jpg', '.jpeg', '.png', '.webp']
+});

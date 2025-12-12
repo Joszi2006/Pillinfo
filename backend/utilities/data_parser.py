@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Dict
 from api.dependencies import get_claude_client
+from config import OCR_MODEL_NAME
 from utilities.prompt_builder import PromptBuilder
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 class DataParser:
     """Parse and clean raw FDA label data using Claude."""
     
-    MODEL = "claude-sonnet-4-5-20250929"
+    MODEL = OCR_MODEL_NAME
     MAX_TOKENS = 2500
     
     def __init__(self):

@@ -4,7 +4,7 @@ Tests for RxNormService
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 import httpx
-from backend.services.drug_lookup.rxnorm_service import RxNormService
+from backend.services.rxnorm_service import RxNormService
 
 
 @pytest.fixture

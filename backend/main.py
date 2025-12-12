@@ -15,7 +15,7 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    from services.text_processor import TextProcessor
+    from ml.text_processor import TextProcessor
     
     # Create text_processor instance and warm up
     text_processor = TextProcessor()

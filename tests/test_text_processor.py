@@ -2,7 +2,7 @@
 Tests for TextProcessor
 """
 import pytest
-from backend.services.text_processor import TextProcessor
+from backend.ml.text_processor import TextProcessor
 
 
 @pytest.fixture(scope="module")

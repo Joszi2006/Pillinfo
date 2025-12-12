@@ -4,21 +4,20 @@ OpenFDA Service - Fetches raw drug information from FDA API
 import httpx
 import asyncio
 import os
-from dotenv import load_dotenv
 from typing import Dict, Optional
+from config import OPENFDA_API_KEY, OPENFDA_BASE_URL, OPENFDA_TIMEOUT
 import asyncio
 
-load_dotenv()
 
 
 class OpenFDAService:
     """Query OpenFDA drug label database by RXCUI."""
     
     def __init__(self):
-        self.base_url = os.getenv("OPENFDA_BASE_URL")
-        self.timeout = int(os.getenv("OPENFDA_TIMEOUT"))
+        self.base_url = OPENFDA_BASE_URL
+        self.timeout = OPENFDA_TIMEOUT
         self.max_retries = 3
-        self.api_key = os.getenv("OPENFDA_API_KEY")
+        self.api_key = OPENFDA_API_KEY
     
     async def get_drug_info(self, rxcui: str) -> Optional[Dict]:
         """Get raw drug info by RXCUI."""

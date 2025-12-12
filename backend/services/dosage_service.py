@@ -3,9 +3,9 @@ Dosage Service - Find appropriate dose for patient
 """
 from typing import Dict, Optional, List
 from api.dependencies import get_drug_database
-from services.dosage.openfda_service import OpenFDAService
-from services.dosage.data_parser import DataParser
-from services.dosage.dosage_calculator import DosageCalculator
+from services.openfda_service import OpenFDAService
+from utilities.data_parser import DataParser
+from services.dosage_calculator import DosageCalculator
 import logging
 
 logger = logging.getLogger(__name__)

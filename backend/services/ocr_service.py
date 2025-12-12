@@ -3,14 +3,15 @@ OCR Service - Extract text from medication images
 """
 from typing import Dict, List
 from api.dependencies import get_claude_client
-from services.image_processor import ImageProcessor
+from config import OCR_MODEL_NAME
+from utilities.image_processor import ImageProcessor
 from utilities.prompt_builder import PromptBuilder
 
 
 class OCRService:
     """Extract medication info from images using Claude Vision."""
     
-    MODEL = "claude-sonnet-4-5-20250929"
+    MODEL = OCR_MODEL_NAME
     MAX_TOKENS = 1024
     
     def __init__(self):

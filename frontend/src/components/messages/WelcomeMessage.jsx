@@ -18,7 +18,7 @@ const WelcomeMessage = ({ onQuickAction }) => {
             </p>
           </div>
 
-          {/* Quick Action Buttons - Separated with margin */}
+          {/* Quick Action Buttons  */}
           <div className="flex flex-wrap gap-2 md:gap-3 mt-4 md:mt-4">
             <QuickActionButton
               icon={

@@ -4,7 +4,7 @@ Tests for OpenFDAService
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 import httpx
-from backend.services.dosage.openfda_service import OpenFDAService
+from backend.services.openfda_service import OpenFDAService
 
 
 @pytest.fixture

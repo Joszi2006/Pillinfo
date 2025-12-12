@@ -3,7 +3,7 @@ Tests for DosageService
 """
 import pytest
 from unittest.mock import patch
-from backend.services.dosage.dosage_service import DosageService
+from backend.services.dosage_service import DosageService
 
 
 @pytest.fixture

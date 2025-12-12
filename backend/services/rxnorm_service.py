@@ -2,14 +2,13 @@
 RxNorm Service - Drug product lookup
 """
 import httpx
-import os
 import logging
 from typing import Dict, Optional, List
-from dotenv import load_dotenv
-import asyncio
+from config import RXNORM_BASE_URL, RXNORM_TIMEOUT
 
-# Load environment variables
-load_dotenv()
+
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,9 +16,8 @@ class RxNormService:
     """Fetch drug products with RXCUIs from RxNorm API."""
     
     def __init__(self):
-        # Load from .env with defaults
-        self.base_url = os.getenv("RXNORM_BASE_URL")
-        timeout_seconds = int(os.getenv("RXNORM_TIMEOUT"))
+        self.base_url = RXNORM_BASE_URL
+        timeout_seconds = RXNORM_TIMEOUT,
         self.timeout = httpx.Timeout(timeout_seconds)
         self.headers = {"User-Agent": "DrugLookupSystem/1.0"}
     
