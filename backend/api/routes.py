@@ -147,3 +147,31 @@ async def clear_database():
     db = get_drug_database()
     db.clear()
     return {"success": True, "message": "Database cleared"}
+
+@router.post("/health")
+async def health_check():
+    """Check database connection and cache status."""
+    try:
+        from api.dependencies import get_drug_database
+        db = get_drug_database()
+        stats = db.get_stats()
+        db.close()
+        
+        return {
+            "status": "healthy",
+            "database": {
+                "connected": True,
+                "total_products": stats["total_products"],
+                "total_brands": stats["total_brands"],
+                "products_with_charts": stats["products_with_dosing_charts"],
+                "size_mb": stats["db_size_mb"]
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "database": {
+                "connected": False,
+                "error": str(e)
+            }
+        }
