@@ -23,8 +23,6 @@ gliner==0.2.9
 # GLiNER dependencies
 transformers==4.46.0
 torch==2.5.0
-bitsandbytes==0.43.1
-
 
 # =============================================================================
 # HTTP Client
