@@ -4,10 +4,10 @@
 SERVER_PORT=8001
 # Wait 10 seconds for graceful shutdown before forcing a kill
 GRACE_PERIOD=10
-
+cd backend
 # Start uvicorn in background (using correct module path)
 echo "Starting backend server on port $SERVER_PORT..."
-uvicorn backend.main:app --reload --port $SERVER_PORT &
+uvicorn main:app --reload --port $SERVER_PORT &
 SERVER_PID=$!
 
 # --- TRAP for Cleanup on Exit (Now handles graceful shutdown) ---
@@ -31,8 +31,8 @@ trap cleanup EXIT
 
 # Give the server time to start
 sleep 10
-echo "Clearing Database"
-curl -X POST http://localhost:$SERVER_PORT/admin/clear-database
+# echo "Clearing Database"
+# curl -X POST http://localhost:$SERVER_PORT/admin/clear-database
 
 # Send the test request
 echo "Sending request to /lookup/text..."

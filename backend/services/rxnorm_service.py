@@ -17,7 +17,7 @@ class RxNormService:
     
     def __init__(self):
         self.base_url = RXNORM_BASE_URL
-        timeout_seconds = RXNORM_TIMEOUT,
+        timeout_seconds = RXNORM_TIMEOUT
         self.timeout = httpx.Timeout(timeout_seconds)
         self.headers = {"User-Agent": "DrugLookupSystem/1.0"}
     

@@ -5,6 +5,7 @@ This file starts the server and connects all routes
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from config import FRONTEND_URL
 import uvicorn
 import os
 from dotenv import load_dotenv
@@ -35,7 +36,7 @@ app = FastAPI(
 # ==================== CORS MIDDLEWARE ====================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL")],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

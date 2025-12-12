@@ -27,12 +27,12 @@ class NERExtractor:
                 device_map=torch.device('cpu') 
             )
 
-            # Apply int8 weight-only quantization
-            self.model = torch.quantization.quantize_dynamic(
-                self.model,
-                {torch.nn.Linear}, 
-                dtype=torch.qint8 
-            )
+            # # Apply int8 weight-only quantization
+            # self.model = torch.quantization.quantize_dynamic(
+            #     self.model,
+            #     {torch.nn.Linear}, 
+            #     dtype=torch.qint8 
+            # )
 
             self.model.eval()
             
