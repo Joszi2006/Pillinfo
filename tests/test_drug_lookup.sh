@@ -38,6 +38,6 @@ sleep 10
 echo "Sending request to /lookup/text..."
 curl -X POST http://localhost:$SERVER_PORT/lookup/text\
   -H "Content-Type: application/json" \
-  -d '{"text": "I have Childrens Zyrtec 5mg/5ml oral solution, my daughter is 3 years old", "use_ner": true, "lookup_all_drugs": true}'
+  -d '{"text": "I have Advil 200mg Oral Tablet, my daughter is 3 years old", "use_ner": true, "lookup_all_drugs": true}'
 
 # The 'trap cleanup EXIT' command will handle the server shutdown after the curl command finishes.

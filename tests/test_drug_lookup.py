@@ -3,7 +3,7 @@ Tests for DrugLookupService
 """
 import pytest
 from unittest.mock import patch
-from backend.services.drug_lookup.drug_lookup_service import DrugLookupService
+from backend.services.drug_lookup_service import DrugLookupService
 
 
 @pytest.fixture

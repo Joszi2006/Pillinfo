@@ -111,6 +111,9 @@ class DrugLookupService:
         top_score = scored[0][1]
         
         # If top score is poor, return all products
+        if top_score == 100:
+            return [scored[0][0]]
+        
         if top_score < 60:
             return products
         
