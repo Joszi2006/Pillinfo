@@ -55,8 +55,13 @@ class DrugLookupService:
     
     async def _fetch_products(self, brand_name: str) -> List:
         """Get products from database or API."""
+        print(f"🔍 Looking up: {brand_name}")  # ← ADD THIS
+        
         cached = self.database.get_products_by_brand(brand_name)
+        print(f"📦 Cache check: Found {len(cached) if cached else 0} products")  # ← ADD THIS
+        
         if cached:
+            print(f"✅ CACHE HIT - Returning cached products")  # ← ADD THIS
             return [
                 {
                     "rxcui": p["rxcui"],
@@ -66,9 +71,11 @@ class DrugLookupService:
                 for p in cached
             ]
         
+        print(f"❌ CACHE MISS - Fetching from RxNorm API")  # ← ADD THIS
         result = await self.rxnorm_service.get_drug_details(brand_name)
         
         if result and result.get("products"):
+            print(f"💾 Saving {len(result['products'])} products to database")  # ← ADD THIS
             for product in result["products"]:
                 self.database.save_product(
                     rxcui=product["rxcui"],

@@ -65,14 +65,22 @@ class DosageService:
         return product
     
     async def _fetch_and_save(self, rxcui: str):
+        print(f"🔍 Fetching FDA data for rxcui: {rxcui}")
         try:
             raw_fda = await self.openfda.get_drug_info(rxcui)
+            
             if raw_fda:
-                cleaned = self.parser.parse_fda_label(raw_fda)    
+                print(f"✅ Got FDA data, parsing...")
+                cleaned = self.parser.parse_fda_label(raw_fda)
+                print(f"✅ Parsed data: {list(cleaned.keys())}")
+                
                 self.database.save_fda_info(rxcui, cleaned)
+                print(f"✅ Saved FDA data to database")
             else:
+                print(f"❌ No FDA data found for rxcui: {rxcui}")
                 logger.warning(f"No FDA data found for rxcui: {rxcui}")
         except Exception as e:
+            print(f"❌ ERROR fetching/saving FDA data: {e}")
             logger.error(f"Failed to fetch/save FDA data for {rxcui}: {e}")
     
     # ==================== DOSE MATCHING LOGIC ====================
