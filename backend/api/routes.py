@@ -140,14 +140,6 @@ async def lookup_from_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/admin/clear-database")
-async def clear_database():
-    """Clear all cached drug data."""
-    from api.dependencies import get_drug_database
-    db = get_drug_database()
-    db.clear()
-    return {"success": True, "message": "Database cleared"}
-
 @router.get("/health")
 async def health_check():
     """Check database connection and cache status."""
