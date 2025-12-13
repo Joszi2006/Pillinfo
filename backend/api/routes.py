@@ -151,9 +151,34 @@ async def clear_database():
 @router.get("/health")
 async def health_check():
     """Check database connection and cache status."""
+    import os
+    
     try:
-        from api.dependencies import get_drug_database
-        db = get_drug_database()
+        # Test 1: Check DATABASE_URL exists
+        db_url = os.getenv("DATABASE_URL")
+        if not db_url:
+            return {
+                "status": "error",
+                "database": {"connected": False, "error": "DATABASE_URL not set"}
+            }
+        
+        # Test 2: Try to connect
+        from data.drug_database import DrugDatabase
+        db = DrugDatabase()
+        
+        # Test 3: Check if connection is open
+        if db.conn.closed:
+            return {
+                "status": "error", 
+                "database": {"connected": False, "error": "Connection closed after init"}
+            }
+        
+        # Test 4: Try a simple query
+        with db.conn.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        
+        # Test 5: Get stats
         stats = db.get_stats()
         db.close()
         
@@ -161,17 +186,17 @@ async def health_check():
             "status": "healthy",
             "database": {
                 "connected": True,
-                "total_products": stats["total_products"],
-                "total_brands": stats["total_brands"],
-                "products_with_charts": stats["products_with_dosing_charts"],
-                "size_mb": stats["db_size_mb"]
+                "url_set": True,
+                "stats": stats
             }
         }
+        
     except Exception as e:
         return {
-            "status": "unhealthy",
+            "status": "error",
             "database": {
                 "connected": False,
-                "error": str(e)
+                "error": str(e),
+                "error_type": type(e).__name__
             }
         }
