@@ -153,7 +153,7 @@ const InputArea = ({ onSendMessage, onUploadImages, prefillText = '', onPrefillC
                   : "Ask about a medication..."
               }
               disabled={isProcessing}
-              className="flex-1 bg-transparent border-none outline-none px-3 md:px-4 py-2 md:py-3 text-sm md:text-[15px] text-slate-700 placeholder-slate-400 disabled:opacity-50"
+              className="flex-1 bg-transparent border-none outline-none px-3 md:px-4 py-3 md:py-3 text-[15px] md:text-[15px] text-slate-800 placeholder-slate-500 disabled:opacity-50 min-h-11"
             />
 
             {/* Send Button*/}
