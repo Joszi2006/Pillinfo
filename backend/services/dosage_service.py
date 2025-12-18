@@ -140,7 +140,7 @@ class DosageService:
                 "warning": "Age-based dosing less accurate than weight-based."
             }
         
-        # No match found - return None (handled in get_dose)
+        # No match found 
         return None
     
     def _calculate_exact_dose(
